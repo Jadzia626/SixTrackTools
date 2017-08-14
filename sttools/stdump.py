@@ -119,6 +119,9 @@ class STDump:
         Select all particles with a given particle ID and copy them to a new dataset
         """
 
+        if partID < 0:
+            partID = len(self.partIdx.keys()) + partID + 1
+
         if not partID in self.partIdx.keys():
             logger.error("Particle ID %d does not exist in dataset" % partID)
             return False
@@ -129,7 +132,7 @@ class STDump:
         for cN in self.colNames:
             self.fData[cN] = self.Data[cN][self.partIdx[partID]]
 
-        logger.info("%d lines were filtered into fData" % len(self.fData["ID"]))
+        logger.info("%d lines with particle ID %d were filtered into fData" % (len(self.fData["ID"]),partID))
 
         return True
 
@@ -138,6 +141,9 @@ class STDump:
         """
         Select all particles with a given turn ID and copy them to a new dataset
         """
+
+        if turnID < 0:
+            turnID = len(self.turnIdx.keys()) + turnID + 1
 
         if not turnID in self.turnIdx.keys():
             logger.error("Turn ID %d does not exist in dataset" % turnID)
@@ -149,7 +155,7 @@ class STDump:
         for cN in self.colNames:
             self.fData[cN] = self.Data[cN][self.turnIdx[turnID]]
 
-        logger.info("%d lines were filtered into fData" % len(self.fData["ID"]))
+        logger.info("%d lines with turn ID %d were filtered into fData" % (len(self.fData["ID"]),turnID))
 
         return True
 

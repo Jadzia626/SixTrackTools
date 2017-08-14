@@ -29,6 +29,7 @@ class STDump:
     fData     = None
 
     nLines    = None
+    isNumPy   = None
 
     def __init__(self, fileName):
 
@@ -36,7 +37,9 @@ class STDump:
         self.metaData = {}
         self.turnIdx  = {}
         self.partIdx  = {}
+        
         self.nLines   = 0
+        self.isNumPy  = False
 
         # Read File
         with open(fileName,mode="rt") as tfsFile:
@@ -105,6 +108,8 @@ class STDump:
             cN = self.colNames[i]
             cT = self.colTypes[i]
             self.Data[cN] = np.asarray(self.Data[cN],dtype=cT)
+
+        self.isNumPy = True
 
         return True
 

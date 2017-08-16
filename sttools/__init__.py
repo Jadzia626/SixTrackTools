@@ -13,6 +13,13 @@
 
 import logging
 
+# Submodules
+from .stdump import STDump
+from .twiss  import Twiss
+
+__all__ = ["STDump","Twiss"]
+
+# Package Meta
 __author__     = "Veronica Berglyd Olsen"
 __copyright__  = "Copyright 2017, Veronica Berglyd Olsen"
 __credits__    = ["Veronica Berglyd Olsen"]
@@ -24,7 +31,7 @@ __email__      = "v.k.b.olsen@cern.ch"
 __status__     = "Development"
 
 logging.basicConfig(
-    format  = "[%(asctime)s] %(name)s:%(lineno)-4d %(levelname)-8s %(message)s",
+    format  = "[%(asctime)s] %(name)s:%(lineno)-4d %(levelname)s: %(message)s",
     level   = logging.DEBUG,
 #   datefmt = "%Y-%m-%d %H:%M:%S",
     datefmt = "%H:%M:%S",

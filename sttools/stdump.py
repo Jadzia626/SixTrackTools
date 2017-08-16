@@ -126,13 +126,17 @@ class STDump:
             logger.error("Particle ID %d does not exist in dataset" % partID)
             return False
 
+        if not self.isNumPy:
+            logger.error("Convert data to numpy arrays first")
+            return False
+
         self.fData = None
         self.fData = {dKey:[] for dKey in self.colNames}
 
         for cN in self.colNames:
             self.fData[cN] = self.Data[cN][self.partIdx[partID]]
 
-        logger.info("%d lines with particle ID %d were filtered into fData" % (len(self.fData["ID"]),partID))
+        logger.info("%d turns with particle ID %d were filtered into fData" % (len(self.fData["ID"]),partID))
 
         return True
 
@@ -149,13 +153,17 @@ class STDump:
             logger.error("Turn ID %d does not exist in dataset" % turnID)
             return False
 
+        if not self.isNumPy:
+            logger.error("Convert data to numpy arrays first")
+            return False
+
         self.fData = None
         self.fData = {dKey:[] for dKey in self.colNames}
 
         for cN in self.colNames:
             self.fData[cN] = self.Data[cN][self.turnIdx[turnID]]
 
-        logger.info("%d lines with turn ID %d were filtered into fData" % (len(self.fData["ID"]),turnID))
+        logger.info("%d particles with turn ID %d were filtered into fData" % (len(self.fData["ID"]),turnID))
 
         return True
 

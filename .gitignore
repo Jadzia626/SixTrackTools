@@ -1,1 +1,6 @@
+# General
 *.pyc
+
+# makeDistributions
+fort*
+seed.txt

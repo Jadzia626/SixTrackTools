@@ -94,7 +94,7 @@ def get_bucket(machine, plot=True, z=0, DELTA=0):
     e  = 1.60217657e-19                    # C, electron charge
     c  = 2.99792485e8                      # m/s, speed of light
 
-    if machine == 'HL_coll' or machine == 'HL_coll_tcp':
+    if machine == "HL_coll" or machine == "HL_coll_tcp":
         h = 35640                          # RF harmonic number
         omegaRF = 400.8e6 * np.pi * 2      # Hz, omegaRF = h*omega0
         slip = 3.467e-4                    # Slip factor @ collission
@@ -103,7 +103,7 @@ def get_bucket(machine, plot=True, z=0, DELTA=0):
         E0 = 7e12                          # Beam energy, eV
 #        bunch = 0.0755
 #        limit = 8e-4
-    elif machine == 'HL_coll_200' or machine == 'HL_coll_tcp_200':
+    elif machine == "HL_coll_200" or machine == "HL_coll_tcp_200":
         h = 17820                          # RF harmonic number
         omegaRF = 200.8e6 * np.pi * 2      # Hz, omegaRF = h*omega0
         slip = 3.467e-4                    # Slip factor @ collission
@@ -112,7 +112,7 @@ def get_bucket(machine, plot=True, z=0, DELTA=0):
         E0 = 7e12                          # Beam energy, eV
 #        bunch = 2*0.0755
 #        limit = 8e-4
-    elif machine == 'SPS_inj':
+    elif machine == "SPS_inj":
         h = 4636                           # RF harmonic number
         omegaRF = 200.2644e6 * np.pi * 2   # Hz, omegaRF = h*omega0
         slip = 5.55e-4
@@ -122,7 +122,7 @@ def get_bucket(machine, plot=True, z=0, DELTA=0):
         E0 = 26e9                          # Beam energy, eV
 #        bunch = 0.3
 #        limit = 6e-3
-    elif machine == 'SPS_55':
+    elif machine == "SPS_55":
         h = 4636                           # RF harmonic number
         omegaRF = 200.2644e6 * np.pi * 2   # Hz, omegaRF = h*omega0
         slip = 0.0016174303947121386       #slip=gammatr**-2-gamma**-2
@@ -131,7 +131,7 @@ def get_bucket(machine, plot=True, z=0, DELTA=0):
         E0 = 55.00800264e9                 # Beam energy, eV
         bunch = 0.3                        # Bunch longitudinal spread [m]
         limit = 6e-3                       # Energy spread (fractional)
-    elif machine == 'SPS_120':
+    elif machine == "SPS_120":
         h = 4620                           # RF harmonic number
         omegaRF = 200.2644e6 * np.pi * 2   # Hz, omegaRF = h*omega0
         slip = 0.0016855233500965051       #slip=gammatr**-2-gamma**-2
@@ -141,9 +141,9 @@ def get_bucket(machine, plot=True, z=0, DELTA=0):
         bunch = 0.3                        # Bunch longitudinal spread [m]
         limit = 6e-3                       # Energy spread (fractional)
 
-        
+
     else:
-        print '>> Please input "HL_coll" or "SPS_inj" as first argument.'
+        print(">> Please input 'HL_coll' or 'SPS_inj' as first argument.")
 
     def get_hamiltonian(DELTA, PHI, omegaRF, E0, slip, p0, beta, h, V, phiS):
         p = p0 * (1.0 + DELTA)  # eV/c
@@ -164,8 +164,8 @@ def get_bucket(machine, plot=True, z=0, DELTA=0):
     if plot == True:
         conversion = c / (omegaRF / (np.pi * 2))
         bucket = (np.pi * beta * c) / omegaRF
-        print '>> Half bucket length = ', bucket
-        print beta
+        print(">> Half bucket length = ", bucket)
+        print(beta)
         delta = np.linspace(-limit * conversion, limit * conversion, 300)  # delta p / p
         phi = np.linspace(-3 * np.pi, 3 *np.pi, 300)
         DELTA, PHI   = np.meshgrid(delta, phi)
@@ -184,24 +184,24 @@ def dist_generator(particles, energy, machine, fort13, jobs, factor, emittance_x
                    beta_x, beta_y, offset_x, offset_xp, offset_y, offset_yp, dispersion_x, dispersion_xp,
                    dispersion_y, dispersion_yp, bunch, spread, seed):
 
-    job_str = '%s'%jobs
+    job_str = "%s"%jobs
     # Getting the Transverse sigmas (amplitudes of phase space ellipse)
     # --------------------------------------------------------------------------------------------------------------
     gamma_rel, beta_rel, p0, mass = get_rel_params(energy)
     emittance_x_geom = emittance_x/(beta_rel*gamma_rel)
     emittance_y_geom = emittance_x/(beta_rel*gamma_rel)
-    
+
     # Seeding
     # --------------------------------------------------------------------------------------------------------------
     if seed == 0:
         myseed = random.randint(0, 429496729)
     else:
         myseed = seed
-    with open('seed.txt', 'a') as g:
-        print >> g,  'job ', job_str ,'seed ', myseed
+    with open("seed.txt","a") as g:
+        g.write("job %s seed %d" % (job_str, myseed))
     np.random.seed(myseed)
     random.seed(myseed)
-    
+
     # Generating the Transverse Distribution
     # --------------------------------------------------------------------------------------------------------------
     x_t  = np.asarray(np.random.normal(0, 1, particles))*factor
@@ -211,15 +211,15 @@ def dist_generator(particles, energy, machine, fort13, jobs, factor, emittance_x
 
     sigma_x = np.array([[beta_x,alpha_x],[-alpha_x,(1+alpha_x**2)/beta_x]])*emittance_x_geom
     sigma_y = np.array([[beta_y,alpha_y],[-alpha_y,(1+alpha_y**2)/beta_y]])*emittance_y_geom
-    C_x = np.linalg.cholesky(sigma_x)
-    C_y = np.linalg.cholesky(sigma_y)
-    
+    C_x     = np.linalg.cholesky(sigma_x)
+    C_y     = np.linalg.cholesky(sigma_y)
+
     x  = C_x[0,0]*x_t + C_x[0,1]*xp_t
     xp = C_x[1,0]*x_t + C_x[1,1]*xp_t
     y  = C_y[0,0]*y_t + C_y[0,1]*yp_t
     yp = C_y[1,0]*y_t + C_y[1,1]*yp_t
-    
-    
+
+
     # # Rotating the Transverse Distribution
     # # --------------------------------------------------------------------------------------------------------------
     # angle_x = np.arctan(-alpha_x/beta_x)
@@ -229,13 +229,13 @@ def dist_generator(particles, energy, machine, fort13, jobs, factor, emittance_x
     # angle_y = np.arctan(-alpha_y/beta_y)
     # y       = y_t*np.cos(angle_y) - yp_t*np.sin(angle_y)
     # yp      = y_t*np.sin(angle_y) + yp_t*np.cos(angle_y)
-    
+
     # Generating the Longitudinal Distribution
     # --------------------------------------------------------------------------------------------------------------
     z  = []
     E  = []
     dp = []
-    
+
     while len(z) < particles:
         # Generate for as long time as is needed
         particle_z = random.gauss(0,1)
@@ -247,9 +247,9 @@ def dist_generator(particles, energy, machine, fort13, jobs, factor, emittance_x
         dPP     = (trial_p - p0) / p0
         h       = get_bucket(machine, plot=False, z=trial_z, DELTA=dPP)  # Longitudinal contour
 
-        if machine=='HL_coll' or  machine=='HL_coll_200' or machine=='HL_coll_tcp'  or machine=='HL_coll_tcp_200':
+        if machine=="HL_coll" or  machine=="HL_coll_200" or machine=="HL_coll_tcp"  or machine=="HL_coll_tcp_200":
             Hmargin = -0.01
-        elif machine=='SPS_inj':
+        elif machine=="SPS_inj":
             Hmargin = -1
         else:
             Hmargin = -1
@@ -261,27 +261,26 @@ def dist_generator(particles, energy, machine, fort13, jobs, factor, emittance_x
         else:
             #print 'Outside margin, trying again,', h
             pass
-  
+
     zz  = np.asarray(z)
     EE  = np.asarray(E)
     ddp = np.asarray(dp)
 
     #Adding the dispersion
-    x += dispersion_x*ddp
+    x  += dispersion_x*ddp
     xp += dispersion_xp*ddp
-    y += dispersion_y*ddp
+    y  += dispersion_y*ddp
     yp += dispersion_yp*ddp
-    
-    
-    if fort13=='False':
-        outfile = 'init_dist_' + job_str + '.txt'
-        with open(outfile, 'w') as f:
+
+    if fort13=="False":
+        outfile = "init_dist_" + job_str + ".txt"
+        with open(outfile, "w") as f:
             for e1, e2, e3, e4, e5, e6 in zip(x, xp, y, yp, zz*1e3, EE*1e-6):
-                f.write('%8.6e %8.6e %8.6e %8.6e %8.6e %8.6e\n' % (e1, e2, e3, e4, e5, e6))
-    elif fort13=='True':
-        outfile = 'fort.13'
-        with open(outfile, 'w') as f:
-            for i in xrange(0, particles, 2):
+                f.write("%8.6e %8.6e %8.6e %8.6e %8.6e %8.6e\n" % (e1, e2, e3, e4, e5, e6))
+    elif fort13=="True":
+        outfile = "fort.13"
+        with open(outfile, "w") as f:
+            for i in range(0, particles, 2):
                 f.write(str((x[i] + offset_x)*1e3) + "\n") #mm
                 f.write(str((xp[i] + offset_xp)*1e3) + "\n") #mrad
                 f.write(str((y[i] + offset_y)*1e3) + "\n") #mm
@@ -300,20 +299,20 @@ def dist_generator(particles, energy, machine, fort13, jobs, factor, emittance_x
                 f.write(str(EE[i]*1e-6) + "\n") #MeV
                 f.write(str(EE[i+1]*1e-6) + "\n") #MeV
     else:
-        print 'Please input True or False in the fourth argument'
+        print("Please input True or False in the fourth argument")
 
     return (x,xp,y,yp,zz,ddp,EE)
 
+# Call the function
 if __name__=="__main__":
-    # Call the function
-    # --------------------------------------------------------------------------------------------------------------
+
     job_range = range(1, int(jobs) + 1)
-    with open('seed.txt', 'a') as g:
-        print >> g, datetime.datetime.now()
-        print >> g, "# ARGUMENTS = ", sys.argv
+    with open("seed.txt","a") as g:
+        g.write(str(datetime.datetime.now()))
+        g.write("# ARGUMENTS = %s" % " ".join(sys.argv))
         for n in job_range:
-            print "job", n
-            j = '%s'%n
+            print("job%d" % n)
+            j = "%s"%n
             dist_generator(particles, energy, machine, fort13, n, factor, emittance_x, emittance_y, alpha_x, alpha_y,
                            beta_x, beta_y, offset_x, offset_xp, offset_y, offset_yp, dispersion_x, dispersion_xp,
                            dispersion_y, dispersion_yp, bunch, spread, seed)

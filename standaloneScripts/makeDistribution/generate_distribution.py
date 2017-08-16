@@ -1,11 +1,26 @@
-#!/usr/bin/env python
-# ----------------------------------------------------------------------------------------------------------------------------
-# Function to generate a particle distribution as input for the collimation routine in SixTrack (round beams at symmetry point)
-# Example for SPS:
-# generate_distribution.py 64 26e9 'SPS_inj' True 1 1 0.9e-6 3.0e-6 1.50895801 -1.392739114 51.8375213 46.54197726 0 0 0 0 0 0 0.3 10.7e-4
-# Example for HL-LHC:
-# generate_distribution.py 64 7e12 'HL_coll' True 1 1 2.5e-6 2.5e-6 0.003485 -0.000764 0.150739 0.150235 -7.5e-4 0 0 0.3e-3 0.003652 0.000517 0.0755 1.13e-4
-# ----------------------------------------------------------------------------------------------------------------------------
+#!/usr/bin/env python3
+"""Generate particle distributions for SixTrack
+
+  SixTrack Scripts - Distribution Generator
+ ===========================================
+  Modified by: Veronica Berglyd Olsen
+      CERN (BE-ABP-HSS)
+      Geneva, Switzerland
+
+  Original Header:
+ -----------------------------------------------------------------------------------------------------------------------
+  Function to generate a particle distribution as input for the collimation routine in SixTrack
+  (round beams at symmetry point)
+
+  Example for SPS:
+    generate_distribution.py 64 26e9 'SPS_inj' True 1 1 0.9e-6 3.0e-6 1.50895801 -1.392739114 51.8375213 46.54197726 \
+                             0 0 0 0 0 0 0.3 10.7e-4
+  Example for HL-LHC:
+    generate_distribution.py 64 7e12 'HL_coll' True 1 1 2.5e-6 2.5e-6 0.003485 -0.000764 0.150739 0.150235 -7.5e-4 0 \
+                             0 0.3e-3 0.003652 0.000517 0.0755 1.13e-4
+
+"""
+
 import datetime
 import sys
 import random
@@ -19,49 +34,44 @@ import numpy as np
 if __name__=="__main__":
 
     if len(sys.argv) != 24:
-        print "Function to generate a particle distribution as input for the collimation routine in SixTrack (round beams at symmetry point)"
-        print "Expected 21 arguments, got", len(sys.argv)-1
-        print
-        print "Example for SPS:"
-        print " generate_distribution.py 64 26e9 'SPS_inj' True 1 1 0.9e-6 3.0e-6 1.50895801 -1.392739114 51.8375213 46.54197726 0 0 0 0 0 0 0.3 10.7e-4 42"
-        print "Example for HL-LHC:"
-        print " generate_distribution.py 64 7e12 'HL_coll' True 1 1 2.5e-6 2.5e-6 0.003485 -0.000764 0.150739 0.150235 -7.5e-4 0 0 0.3e-3 0.003652 0.000517 0.0755 1.13e-4 42"
-        print "Arguments:"
-        print " particles, energy, machine, fort13, jobs, factor, emittance_x, emittance_y, alpha_x, alpha_y, beta_x, beta_y, offset_x, offset_xp, offset_y, offset_yp, dispersion_x, dispersion_xp, dispersion_y, dispersion_yp, bunch, spread, seed"
-
-        print
-        print sys.argv
+        print("Function to generate a particle distribution as input for the collimation routine in SixTrack")
+        print("(round beams at symmetry point)")
+        print("Expected 24 arguments, got "+(len(sys.argv)-1))
+        print("")
+        print("Arguments:")
+        print("  particles, energy, machine, fort13, jobs, factor, emittance_x, emittance_y, alpha_x, alpha_y,")
+        print("  beta_x, beta_y, offset_x, offset_xp, offset_y, offset_yp, dispersion_x, dispersion_xp,")
+        print("  dispersion_y, dispersion_yp, bunch, spread, seed")
+        print("")
+        print(sys.argv)
         exit(1)
 
     # Pass the Command Line Arguments
-    # --------------------------------------------------------------------------------------------------------------
-    particles    = int(sys.argv[1])
-    energy       = float(sys.argv[2])
-    machine      = str(sys.argv[3])
-    fort13       = sys.argv[4]
-    jobs         = int(sys.argv[5])
-    factor       = float(sys.argv[6])
-    emittance_x  = float(sys.argv[7])
-    emittance_y  = float(sys.argv[8])
-    alpha_x      = float(sys.argv[9])
-    alpha_y      = float(sys.argv[10])
-    beta_x       = float(sys.argv[11])
-    beta_y       = float(sys.argv[12])
-    offset_x     = float(sys.argv[13])
-    offset_xp    = float(sys.argv[14])
-    offset_y     = float(sys.argv[15])
-    offset_yp    = float(sys.argv[16])
-    dispersion_x = float(sys.argv[17])
-    dispersion_xp= float(sys.argv[18])
-    dispersion_y = float(sys.argv[19])
-    dispersion_yp= float(sys.argv[20])
-    bunch        = float(sys.argv[21])
-    spread       = float(sys.argv[22])
-    seed         = int(sys.argv[23])
+    particles     = int(sys.argv[1])
+    energy        = float(sys.argv[2])
+    machine       = str(sys.argv[3])
+    fort13        = sys.argv[4]
+    jobs          = int(sys.argv[5])
+    factor        = float(sys.argv[6])
+    emittance_x   = float(sys.argv[7])
+    emittance_y   = float(sys.argv[8])
+    alpha_x       = float(sys.argv[9])
+    alpha_y       = float(sys.argv[10])
+    beta_x        = float(sys.argv[11])
+    beta_y        = float(sys.argv[12])
+    offset_x      = float(sys.argv[13])
+    offset_xp     = float(sys.argv[14])
+    offset_y      = float(sys.argv[15])
+    offset_yp     = float(sys.argv[16])
+    dispersion_x  = float(sys.argv[17])
+    dispersion_xp = float(sys.argv[18])
+    dispersion_y  = float(sys.argv[19])
+    dispersion_yp = float(sys.argv[20])
+    bunch         = float(sys.argv[21])
+    spread        = float(sys.argv[22])
+    seed          = int(sys.argv[23])
 
-    #print "offsets:", offset_x, offset_xp, offset_y, offset_yp
-
-#Copy-pasted from util.py
+# Copy-pasted from util.py
 def get_rel_params(energy, mass=0.938272046e9):
     """
     Returns the relativistic beta and gamma, the momenta and mass used.
@@ -75,7 +85,8 @@ def get_rel_params(energy, mass=0.938272046e9):
     return gamma_rel, beta_rel, p0, mass
 
 def get_bucket(machine, plot=True, z=0, DELTA=0):
-    """ Returns the data needed to plot the RF bucket of LHC.
+    """
+    Returns the data needed to plot the RF bucket of LHC.
     Adapted from Kyrre Sjobak.
     Usage: plt.contour(PHIp * 0.1, DELTA_E, H, 40, linewidths=0.3, cmap='terrain_r')
     """
@@ -169,7 +180,9 @@ def get_bucket(machine, plot=True, z=0, DELTA=0):
         return H
 
 
-def dist_generator(particles, energy, machine, fort13, jobs, factor, emittance_x, emittance_y, alpha_x, alpha_y, beta_x, beta_y, offset_x, offset_xp, offset_y, offset_yp, dispersion_x, dispersion_xp, dispersion_y, dispersion_yp, bunch, spread, seed):
+def dist_generator(particles, energy, machine, fort13, jobs, factor, emittance_x, emittance_y, alpha_x, alpha_y,
+                   beta_x, beta_y, offset_x, offset_xp, offset_y, offset_yp, dispersion_x, dispersion_xp,
+                   dispersion_y, dispersion_yp, bunch, spread, seed):
 
     job_str = '%s'%jobs
     # Getting the Transverse sigmas (amplitudes of phase space ellipse)
@@ -290,6 +303,7 @@ def dist_generator(particles, energy, machine, fort13, jobs, factor, emittance_x
         print 'Please input True or False in the fourth argument'
 
     return (x,xp,y,yp,zz,ddp,EE)
+
 if __name__=="__main__":
     # Call the function
     # --------------------------------------------------------------------------------------------------------------
@@ -300,7 +314,7 @@ if __name__=="__main__":
         for n in job_range:
             print "job", n
             j = '%s'%n
-            dist_generator(particles, energy, machine, fort13, n, factor, emittance_x, emittance_y, alpha_x, alpha_y, beta_x, beta_y, offset_x, offset_xp, offset_y, offset_yp, dispersion_x, dispersion_xp, dispersion_y, dispersion_yp, bunch, spread, seed)
-    
-
+            dist_generator(particles, energy, machine, fort13, n, factor, emittance_x, emittance_y, alpha_x, alpha_y,
+                           beta_x, beta_y, offset_x, offset_xp, offset_y, offset_yp, dispersion_x, dispersion_xp,
+                           dispersion_y, dispersion_yp, bunch, spread, seed)
 

@@ -8,16 +8,17 @@
       Geneva, Switzerland
 
   Original Header:
- -----------------------------------------------------------------------------------------------------------------------
+  By: Andrea Santamaria Garcia, Kyrre Sjobak
+ ---------------------------------------------------------------------------------------------------
   Function to generate a particle distribution as input for the collimation routine in SixTrack
   (round beams at symmetry point)
 
   Example for SPS:
-    generate_distribution.py 64 26e9 'SPS_inj' True 1 1 0.9e-6 3.0e-6 1.50895801 -1.392739114 51.8375213 46.54197726 \
-                             0 0 0 0 0 0 0.3 10.7e-4
+    generate_distribution.py 64 26e9 'SPS_inj' True 1 1 0.9e-6 3.0e-6 1.50895801 -1.392739114 \
+                             51.8375213 46.54197726 0 0 0 0 0 0 0.3 10.7e-4
   Example for HL-LHC:
-    generate_distribution.py 64 7e12 'HL_coll' True 1 1 2.5e-6 2.5e-6 0.003485 -0.000764 0.150739 0.150235 -7.5e-4 0 \
-                             0 0.3e-3 0.003652 0.000517 0.0755 1.13e-4
+    generate_distribution.py 64 7e12 'HL_coll' True 1 1 2.5e-6 2.5e-6 0.003485 -0.000764 \
+                             0.150739 0.150235 -7.5e-4 0 0 0.3e-3 0.003652 0.000517 0.0755 1.13e-4
 
 """
 
@@ -103,6 +104,7 @@ def get_bucket(machine, plot=True, z=0, DELTA=0):
         E0 = 7e12                          # Beam energy, eV
 #        bunch = 0.0755
 #        limit = 8e-4
+
     elif machine == "HL_coll_200" or machine == "HL_coll_tcp_200":
         h = 17820                          # RF harmonic number
         omegaRF = 200.8e6 * np.pi * 2      # Hz, omegaRF = h*omega0
@@ -112,6 +114,7 @@ def get_bucket(machine, plot=True, z=0, DELTA=0):
         E0 = 7e12                          # Beam energy, eV
 #        bunch = 2*0.0755
 #        limit = 8e-4
+
     elif machine == "SPS_inj":
         h = 4636                           # RF harmonic number
         omegaRF = 200.2644e6 * np.pi * 2   # Hz, omegaRF = h*omega0
@@ -122,6 +125,7 @@ def get_bucket(machine, plot=True, z=0, DELTA=0):
         E0 = 26e9                          # Beam energy, eV
 #        bunch = 0.3
 #        limit = 6e-3
+
     elif machine == "SPS_55":
         h = 4636                           # RF harmonic number
         omegaRF = 200.2644e6 * np.pi * 2   # Hz, omegaRF = h*omega0
@@ -131,6 +135,7 @@ def get_bucket(machine, plot=True, z=0, DELTA=0):
         E0 = 55.00800264e9                 # Beam energy, eV
         bunch = 0.3                        # Bunch longitudinal spread [m]
         limit = 6e-3                       # Energy spread (fractional)
+
     elif machine == "SPS_120":
         h = 4620                           # RF harmonic number
         omegaRF = 200.2644e6 * np.pi * 2   # Hz, omegaRF = h*omega0
@@ -140,7 +145,6 @@ def get_bucket(machine, plot=True, z=0, DELTA=0):
         E0 = 120.0036681e9                 # Beam energy, eV
         bunch = 0.3                        # Bunch longitudinal spread [m]
         limit = 6e-3                       # Energy spread (fractional)
-
 
     else:
         print(">> Please input 'HL_coll' or 'SPS_inj' as first argument.")

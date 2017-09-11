@@ -1,7 +1,2 @@
 # General
 *.pyc
-
-# standaloneScripts/makeDistribution
-standaloneScripts/makeDistribution/fort.13
-standaloneScripts/makeDistribution/seed.txt
-standaloneScripts/makeDistribution/makeDist.sh

@@ -8,10 +8,14 @@
       CERN (BE-ABP-HSS)
       Geneva, Switzerland
 
+  This class will parse the SixTrack dump.txt file and any file with a similar structure.
+  The only requirement is that the first column is the particle ID and the second column is the turn number.
+
 """
 
 import logging
 import numpy   as np
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +41,10 @@ class STDump:
         self.metaData = {}
         self.turnIdx  = {}
         self.partIdx  = {}
+
+        colNames  = []
+        colTypes  = []
+        colLabels = []
         
         self.nLines   = 0
         self.isNumPy  = False
@@ -44,49 +52,74 @@ class STDump:
         # Read File
         with open(fileName,mode="rt") as tfsFile:
 
+            lineNo = 1
             # Metadata
             tfsLine = tfsFile.readline().strip()
             if tfsLine[0] == "#":
-                clLine = tfsLine[1:].strip()
-                if clLine[0:2] == "DU":
-                    metaBits = clLine.split(",")
-                    self.metaData["FORMAT"] = metaBits[0][-1]
-                    for metaBit in metaBits:
-                        metaBit   = metaBit.strip()
-                        metaParts = metaBit.split("=")
-                        if metaParts[0] == "bez":                 self.metaData["BEZ"]         = str(metaParts[1].strip())
-                        if metaParts[0] == "number of particles": self.metaData["N_PART"]      = int(metaParts[1].strip())
-                        if metaParts[0] == "dump period":         self.metaData["DUMP_PERIOD"] = int(metaParts[1].strip())
-                        if metaParts[0] == "first turn":          self.metaData["FIRST_TURN"]  = int(metaParts[1].strip())
-                        if metaParts[0] == "last turn":           self.metaData["LAST_TURN"]   = int(metaParts[1].strip())
-                        if metaParts[0] == "HIGH":                self.metaData["HIGH"]        = str(metaParts[1].strip())
-                        if metaParts[0] == "FRONT":               self.metaData["FRONT"]       = str(metaParts[1].strip())
+                clLine   = tfsLine[1:].strip()
+                metaBits = clLine.split(",")
+                self.metaData["FORMAT"] = metaBits[0]
+                for b in range(1,len(metaBits)):
+                    metaBit   = metaBits[b].strip()
+                    metaParts = metaBit.split("=")
+                    metaLabel = metaParts[0].strip().upper().replace(" ","_")
+                    metaValue = metaParts[1].strip()
+                    if isinstance(metaValue,int):
+                        self.metaData[metaLabel] = int(metaValue)
+                    elif isinstance(metaValue,float):
+                        self.metaData[metaLabel] = float(metaValue)
+                    else:
+                        self.metaData[metaLabel] = metaValue
             else:
                 logger.error("First line is not metadata")
                 return
 
-            # Set Columns from Dump Format
-            if self.metaData["FORMAT"] == "2":
-                self.colNames  = ["ID", "TURN","S",    "X",    "XP",      "Y",    "YP",      "Z",    "E",      "KTRACK"]
-                self.colTypes  = ["int","int", "float","float","float",   "float","float",   "float","float",  "int"]
-                self.colLabels = ["ID", "Turn","s[m]", "x[mm]","xp[mrad]","y[mm]","yp[mrad]","z[mm]","dE/E[1]","ktrack"]
-                self.Data      = {dKey:[] for dKey in self.colNames}
+            lineNo += 1
+            # Column labels
+            tfsLine = tfsFile.readline().strip()
+            if tfsLine[0] == "#":
+                clLine   = tfsLine[1:].strip()
+                colBits = clLine.split()
+                for colBit in colBits:
+                    colBit   = colBit.strip()
+                    colParts = colBit.split("[")
+                    colName  = colParts[0].strip().upper()
+                    colName  = re.sub("[^0-9A-Z]+","",colName)
+                    self.colNames.append(colName)
+                    self.colTypes.append("str")
+                    self.colLabels.append(colBit)
+                self.Data = {dKey:[] for dKey in self.colNames}
             else:
-                logger.error("Unsupported data format")
+                logger.error("Second line is not column labels")
                 return
 
             # Read Data
             for tfsLine in tfsFile:
 
+                lineNo += 1
                 tfsLine = tfsLine.strip()
                 if tfsLine[0] == "#": continue
 
                 spLines = tfsLine.split()
                 for (spLine,cN) in zip(spLines,self.colNames):
-                    if len(spLines) == 10:
-                        pPart = int(spLines[0])
-                        pTurn = int(spLines[1])
+                    if len(spLines) == len(self.colNames) and len(spLines) > 2:
+                        pPart = int(spLines[0]) # Expect first column to be particle ID
+                        pTurn = int(spLines[1]) # Expect second column to be turn ID 
                         self.Data[cN].append(spLine)
+                    else:
+                        logger.warning("Line %d has an unexpected number of elements" % lineNo)
+
+                    # For first data line, try to determine data type
+                    if lineNo == 3:
+                        self.colTypes[1] = "int"
+                        self.colTypes[2] = "int"
+                        for e in range(2,len(spLines)):
+                            if isinstance(spLines[e],int):
+                                self.colTypes[e] = "int"
+                            elif isinstance(spLines[e],float):
+                                self.colTypes[e] = "float"
+                            else:
+                                self.colTypes[e] = "str"
 
                 dataID = len(self.Data["ID"]) -1
                 self.turnIdx.setdefault(pTurn,[]).append(dataID)

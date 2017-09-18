@@ -27,8 +27,7 @@ class STDump:
     colNames  = None
     colTypes  = None
     colLabels = None
-    turnIdx   = None
-    partIdx   = None
+    colIndex  = None
     Data      = None
     fData     = None
 
@@ -39,24 +38,29 @@ class STDump:
 
         self.fileName = fileName
         self.metaData = {}
-        self.turnIdx  = {}
-        self.partIdx  = {}
 
-        colNames  = []
-        colTypes  = []
-        colLabels = []
-        
+        self.colNames  = []
+        self.colTypes  = []
+        self.colLabels = []
+
+        self.idxData   = {}
+        self.idxNames  = []
+
         self.nLines   = 0
         self.isNumPy  = False
 
-        # Read File
-        with open(fileName,mode="rt") as tfsFile:
+        #  Read File
+        # ===========
+        #  Reads the first three lines:
+        #  Line 1: File metadata. Must start with #
+        #  Line 2: Column header. Must start with #
+        #  Line 3: First dataline. Used to detect datatypes.
+        with open(fileName,mode="rt") as tmpFile:
 
-            lineNo = 1
-            # Metadata
-            tfsLine = tfsFile.readline().strip()
-            if tfsLine[0] == "#":
-                clLine   = tfsLine[1:].strip()
+            # Line 1: Metadata
+            tmpLine = tmpFile.readline().strip()
+            if tmpLine[0] == "#":
+                clLine   = tmpLine[1:].strip()
                 metaBits = clLine.split(",")
                 self.metaData["FORMAT"] = metaBits[0]
                 for b in range(1,len(metaBits)):
@@ -74,11 +78,10 @@ class STDump:
                 logger.error("First line is not metadata")
                 return
 
-            lineNo += 1
-            # Column labels
-            tfsLine = tfsFile.readline().strip()
-            if tfsLine[0] == "#":
-                clLine   = tfsLine[1:].strip()
+            # Line 2: Column Header
+            tmpLine = tmpFile.readline().strip()
+            if tmpLine[0] == "#":
+                clLine  = tmpLine[1:].strip()
                 colBits = clLine.split()
                 for colBit in colBits:
                     colBit   = colBit.strip()
@@ -93,44 +96,67 @@ class STDump:
                 logger.error("Second line is not column labels")
                 return
 
-            # Read Data
-            for tfsLine in tfsFile:
-
-                lineNo += 1
-                tfsLine = tfsLine.strip()
-                if tfsLine[0] == "#": continue
-
-                spLines = tfsLine.split()
-                for (spLine,cN) in zip(spLines,self.colNames):
-                    if len(spLines) == len(self.colNames) and len(spLines) > 2:
-                        pPart = int(spLines[0]) # Expect first column to be particle ID
-                        pTurn = int(spLines[1]) # Expect second column to be turn ID 
-                        self.Data[cN].append(spLine)
+            # Line 3: First Data Line
+            tmpLine = tmpFile.readline().strip()
+            if tmpLine[0] == "#":
+                logger.error("Third line is not data")
+                return
+            else:
+                clLine  = tmpLine[1:].strip()
+                colBits = clLine.split()
+                colNum  = 0
+                for colBit in colBits:
+                    colBit = colBit.strip()
+                    print(colBit)
+                    if isinstance(colBit,int):
+                        self.colTypes[colNum] = "int"
+                    elif isinstance(colBit,float):
+                        self.colTypes[colNum] = "float"
                     else:
-                        logger.warning("Line %d has an unexpected number of elements" % lineNo)
-
-                    # For first data line, try to determine data type
-                    if lineNo == 3:
-                        self.colTypes[1] = "int"
-                        self.colTypes[2] = "int"
-                        for e in range(2,len(spLines)):
-                            if isinstance(spLines[e],int):
-                                self.colTypes[e] = "int"
-                            elif isinstance(spLines[e],float):
-                                self.colTypes[e] = "float"
-                            else:
-                                self.colTypes[e] = "str"
-
-                dataID = len(self.Data["ID"]) -1
-                self.turnIdx.setdefault(pTurn,[]).append(dataID)
-                self.partIdx.setdefault(pPart,[]).append(dataID)
-
-            self.nLines = len(self.Data["ID"])
-
-            logger.info("%d lines of data read" % self.nLines)
+                        self.colTypes[colNum] = "str"
+                    colNum += 1
 
         return
 
+    def loadAll(self):
+
+        #     for tmpLine in tmpFile:
+        # 
+        #         tmpLine = tmpLine.strip()
+        #         if tmpLine[0] == "#": continue # Skip all further comment lines
+        # 
+        #         spLines = tmpLine.split()
+        #         for (spLine,cN) in zip(spLines,self.colNames):
+        #             if len(spLines) == len(self.colNames):
+        #                 self.Data[cN].append(spLine)
+        #             else:
+        #                 logger.warning("Line %d has an unexpected number of elements" % lineNo)
+        # 
+        #             # For first data line, try to determine data type
+        #             if not gotType:
+        #                 for e in range(len(spLines)):
+        #                     if isinstance(spLines[e],int):
+        #                         self.colTypes[e] = "int"
+        #                     elif isinstance(spLines[e],float):
+        #                         self.colTypes[e] = "float"
+        #                     else:
+        #                         self.colTypes[e] = "str"
+        #                     # Create index for all columns
+        #                 gotType = True
+        # 
+        #         dataID = len(self.Data["ID"]) -1
+        #         self.turnIdx.setdefault(pTurn,[]).append(dataID)
+        #         self.partIdx.setdefault(pPart,[]).append(dataID)
+        # 
+        #     self.nLines = len(self.Data["ID"])
+        # 
+        #     logger.info("%d lines of data read" % self.nLines)
+        # 
+        # for i in range(len(self.colNames)):
+        #     cN = self.colNames[i]
+        #     cT = self.colTypes[i]
+        #     self.Data[cN] = np.asarray(self.Data[cN],dtype=cT)
+        return
 
     def convertToNumpy(self):
         """

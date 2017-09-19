@@ -21,13 +21,18 @@ logger = logging.getLogger(__name__)
 
 
 class STDump:
-    
+
     fileName  = None
     metaData  = None
+
     colNames  = None
     colTypes  = None
     colLabels = None
-    colIndex  = None
+
+    idxData   = None
+    idxNames  = None
+    hasIndex  = None
+
     Data      = None
     fData     = None
 
@@ -45,6 +50,7 @@ class STDump:
 
         self.idxData   = {}
         self.idxNames  = []
+        self.hasIndex  = {}
 
         self.nLines   = 0
         self.isNumPy  = False
@@ -102,18 +108,24 @@ class STDump:
                 logger.error("Third line is not data")
                 return
             else:
-                clLine  = tmpLine[1:].strip()
-                colBits = clLine.split()
+                colBits = tmpLine.split()
                 colNum  = 0
                 for colBit in colBits:
-                    colBit = colBit.strip()
-                    print(colBit)
-                    if isinstance(colBit,int):
-                        self.colTypes[colNum] = "int"
-                    elif isinstance(colBit,float):
-                        self.colTypes[colNum] = "float"
+                    colBit  = colBit.strip()
+                    makeIdx = False
+                    try:
+                        tmpVal = int(colBit)
+                    except ValueError:
+                        try:
+                            tmpVal = float(colBit)
+                        except ValueError:
+                            self.colTypes[colNum] = "str"
+                        else:
+                            self.colTypes[colNum] = "float"
                     else:
-                        self.colTypes[colNum] = "str"
+                        self.colTypes[colNum] = "int"
+                        makeIdx = True
+                    self.hasIndex[self.colNames[colNum]] = makeIdx
                     colNum += 1
 
         return

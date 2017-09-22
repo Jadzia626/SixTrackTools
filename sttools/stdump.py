@@ -17,32 +17,24 @@ import logging
 import numpy   as np
 import re
 
+from os import path
+
 logger = logging.getLogger(__name__)
 
 
 class STDump:
 
-    fileName  = None
-    metaData  = None
-
-    colNames  = None
-    colTypes  = None
-    colLabels = None
-
-    idxData   = None
-    idxNames  = None
-    hasIndex  = None
-
-    Data      = None
-    fData     = None
-
-    nLines    = None
-    isNumPy   = None
-
     def __init__(self, fileName):
 
-        self.fileName = fileName
-        self.metaData = {}
+        if path.isfile(fileName):
+            self.validFile = True
+        else:
+            logger.error("File not found: %s" % fileName)
+            self.validFile = False
+            return
+
+        self.fileName  = fileName
+        self.metaData  = {}
 
         self.colNames  = []
         self.colTypes  = []
@@ -61,7 +53,7 @@ class STDump:
         #  Line 1: File metadata. Must start with #
         #  Line 2: Column header. Must start with #
         #  Line 3: First dataline. Used to detect datatypes.
-        with open(fileName,mode="rt") as tmpFile:
+        with open(self.fileName,mode="rt") as tmpFile:
 
             # Line 1: Metadata
             tmpLine = tmpFile.readline().strip()
@@ -125,65 +117,53 @@ class STDump:
                     else:
                         self.colTypes[colNum] = "int"
                         makeIdx = True
+
                     self.hasIndex[self.colNames[colNum]] = makeIdx
+                    if makeIdx:
+                        self.idxData[self.colNames[colNum]] = {}
+
                     colNum += 1
 
         return
 
-    def loadAll(self):
-
-        #     for tmpLine in tmpFile:
-        # 
-        #         tmpLine = tmpLine.strip()
-        #         if tmpLine[0] == "#": continue # Skip all further comment lines
-        # 
-        #         spLines = tmpLine.split()
-        #         for (spLine,cN) in zip(spLines,self.colNames):
-        #             if len(spLines) == len(self.colNames):
-        #                 self.Data[cN].append(spLine)
-        #             else:
-        #                 logger.warning("Line %d has an unexpected number of elements" % lineNo)
-        # 
-        #             # For first data line, try to determine data type
-        #             if not gotType:
-        #                 for e in range(len(spLines)):
-        #                     if isinstance(spLines[e],int):
-        #                         self.colTypes[e] = "int"
-        #                     elif isinstance(spLines[e],float):
-        #                         self.colTypes[e] = "float"
-        #                     else:
-        #                         self.colTypes[e] = "str"
-        #                     # Create index for all columns
-        #                 gotType = True
-        # 
-        #         dataID = len(self.Data["ID"]) -1
-        #         self.turnIdx.setdefault(pTurn,[]).append(dataID)
-        #         self.partIdx.setdefault(pPart,[]).append(dataID)
-        # 
-        #     self.nLines = len(self.Data["ID"])
-        # 
-        #     logger.info("%d lines of data read" % self.nLines)
-        # 
-        # for i in range(len(self.colNames)):
-        #     cN = self.colNames[i]
-        #     cT = self.colTypes[i]
-        #     self.Data[cN] = np.asarray(self.Data[cN],dtype=cT)
-        return
-
-    def convertToNumpy(self):
+    def readAll(self):
         """
-        Convert data to NumPy arrays
+        Reads all lines that do not start with #
+        Generates an index for all columns with hadIndex = True
         """
 
+        with open(self.fileName,mode="rt") as tmpFile:
+
+            lineNo = 0
+
+            for tmpLine in tmpFile:
+
+                tmpLine = tmpLine.strip()
+                lineNo += 1
+                if tmpLine[0] == "#": continue # Skip all comment lines
+
+                spLines = tmpLine.split()
+                for (spLine,cN) in zip(spLines,self.colNames):
+
+                    if len(spLines) == len(self.colNames):
+                        self.Data[cN].append(spLine)
+                    else:
+                        logger.warning("Line %d has an unexpected number of elements" % lineNo)
+
+                    if self.hasIndex[cN]:
+                        dataID = len(self.Data["ID"]) -1
+                        self.idxData[cN].setdefault(spLine,[]).append(dataID)
+
+            self.nLines = len(self.Data["ID"])
+            logger.info("%d lines of data read" % self.nLines)
+
+        # Convert columns to numpy arrays
         for i in range(len(self.colNames)):
             cN = self.colNames[i]
             cT = self.colTypes[i]
             self.Data[cN] = np.asarray(self.Data[cN],dtype=cT)
 
-        self.isNumPy = True
-
-        return True
-
+        return
 
     def filterPart(self, partID):
         """

@@ -21,32 +21,33 @@ from os import path
 
 logger = logging.getLogger(__name__)
 
-
 class STDump:
-
+    
     def __init__(self, fileName):
-
+        
         if path.isfile(fileName):
             self.validFile = True
         else:
             logger.error("File not found: %s" % fileName)
             self.validFile = False
             return
-
+        
         self.fileName  = fileName
         self.metaData  = {}
-
+        
         self.colNames  = []
         self.colTypes  = []
         self.colLabels = []
-
+        
         self.idxData   = {}
         self.idxNames  = []
         self.hasIndex  = {}
-
+        
+        self.allData  = None
+        self.filData  = None
         self.nLines   = 0
         self.isNumPy  = False
-
+        
         #  Read File
         # ===========
         #  Reads the first three lines:
@@ -54,7 +55,7 @@ class STDump:
         #  Line 2: Column header. Must start with #
         #  Line 3: First dataline. Used to detect datatypes.
         with open(self.fileName,mode="rt") as tmpFile:
-
+            
             # Line 1: Metadata
             tmpLine = tmpFile.readline().strip()
             if tmpLine[0] == "#":
@@ -75,7 +76,7 @@ class STDump:
             else:
                 logger.error("First line is not metadata")
                 return
-
+            
             # Line 2: Column Header
             tmpLine = tmpFile.readline().strip()
             if tmpLine[0] == "#":
@@ -89,11 +90,10 @@ class STDump:
                     self.colNames.append(colName)
                     self.colTypes.append("str")
                     self.colLabels.append(colBit)
-                self.Data = {dKey:[] for dKey in self.colNames}
             else:
                 logger.error("Second line is not column labels")
                 return
-
+            
             # Line 3: First Data Line
             tmpLine = tmpFile.readline().strip()
             if tmpLine[0] == "#":
@@ -117,116 +117,106 @@ class STDump:
                     else:
                         self.colTypes[colNum] = "int"
                         makeIdx = True
-
+                    
                     self.hasIndex[self.colNames[colNum]] = makeIdx
                     if makeIdx:
                         self.idxData[self.colNames[colNum]] = {}
-
+                    
                     colNum += 1
-
+        
         return
-
+    
+    
+    def addIndex(self, colName):
+        """
+        Adds an index for the sepcified column. Must be run before readAll.
+        This function does not check whether it makes sense to index that column.
+        For instance, if it's float values, it may generate one index entry per value.
+        """
+        
+        if colName in self.colNames:
+            self.hasIndex[colName] = True
+        
+        return
+    
+    
     def readAll(self):
         """
         Reads all lines that do not start with #
-        Generates an index for all columns with hadIndex = True
+        Generates an index for all columns with hasIndex = True
         """
 
+        self.allData = {dKey:[] for dKey in self.colNames}
         with open(self.fileName,mode="rt") as tmpFile:
-
+            
             lineNo = 0
-
+            
             for tmpLine in tmpFile:
-
+                
                 tmpLine = tmpLine.strip()
                 lineNo += 1
                 if tmpLine[0] == "#": continue # Skip all comment lines
-
+                
                 spLines = tmpLine.split()
                 for (spLine,cN) in zip(spLines,self.colNames):
-
+                    
                     if len(spLines) == len(self.colNames):
-                        self.Data[cN].append(spLine)
+                        self.allData[cN].append(spLine)
                     else:
                         logger.warning("Line %d has an unexpected number of elements" % lineNo)
-
+                    
                     if self.hasIndex[cN]:
-                        dataID = len(self.Data["ID"]) -1
+                        dataID = len(self.allData["ID"]) -1
                         self.idxData[cN].setdefault(spLine,[]).append(dataID)
-
-            self.nLines = len(self.Data["ID"])
+            
+            self.nLines = len(self.allData["ID"])
             logger.info("%d lines of data read" % self.nLines)
-
+        
         # Convert columns to numpy arrays
         for i in range(len(self.colNames)):
             cN = self.colNames[i]
             cT = self.colTypes[i]
-            self.Data[cN] = np.asarray(self.Data[cN],dtype=cT)
-
+            self.allData[cN] = np.asarray(self.allData[cN],dtype=cT)
+        
         return
-
-    def filterPart(self, partID):
+    
+    
+    def filterPart(self, colName, colValue):
         """
-        Select all particles with a given particle ID and copy them to a new dataset
+        Selects all particles with a given column value for a given column name.
+        Entries are copied into filData
         """
-
-        if partID < 0:
-            partID = len(self.partIdx.keys()) + partID + 1
-
-        if not partID in self.partIdx.keys():
-            logger.error("Particle ID %d does not exist in dataset" % partID)
+        
+        colName  = str(colName)
+        colValue = str(colValue)
+        if not colName in self.colNames:
+            logger.error("Unknown column name '%s'" % colName)
             return False
-
-        if not self.isNumPy:
-            logger.error("Convert data to numpy arrays first")
+        
+        if not colValue in self.idxData[colName].keys():
+            logger.error("Particles with %s = %s do not exist in dataset" % (colName,colValue))
             return False
-
-        self.fData = None
-        self.fData = {dKey:[] for dKey in self.colNames}
-
+        
+        self.filData = None
+        self.filData = {dKey:[] for dKey in self.colNames}
+        
         for cN in self.colNames:
-            self.fData[cN] = self.Data[cN][self.partIdx[partID]]
-
-        logger.info("%d turns with particle ID %d were filtered into fData" % (len(self.fData["ID"]),partID))
-
+            self.filData[cN] = self.allData[cN][self.idxData[colName][colValue]]
+        
+        logger.info("%d particle with %s = %s were filtered into filData" % (len(self.filData["ID"]),colName,colValue))
+        
         return True
-
-
-    def filterTurn(self, turnID):
-        """
-        Select all particles with a given turn ID and copy them to a new dataset
-        """
-
-        if turnID < 0:
-            turnID = len(self.turnIdx.keys()) + turnID + 1
-
-        if not turnID in self.turnIdx.keys():
-            logger.error("Turn ID %d does not exist in dataset" % turnID)
-            return False
-
-        if not self.isNumPy:
-            logger.error("Convert data to numpy arrays first")
-            return False
-
-        self.fData = None
-        self.fData = {dKey:[] for dKey in self.colNames}
-
-        for cN in self.colNames:
-            self.fData[cN] = self.Data[cN][self.turnIdx[turnID]]
-
-        logger.info("%d particles with turn ID %d were filtered into fData" % (len(self.fData["ID"]),turnID))
-
-        return True
-
+    
+    
     #
     #  Internal Functions
     #
-
+    
     def stripQuotes(self, sVar):
-
+        
         if (sVar[0] == sVar[-1]) and sVar.startswith(("'",'"')):
             return sVar[1:-1]
-
+        
         return sVar
-
+    
 ## End Class TableFS

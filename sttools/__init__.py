@@ -31,9 +31,10 @@ __email__      = "v.k.b.olsen@cern.ch"
 __status__     = "Development"
 
 logging.basicConfig(
-    format  = "[%(asctime)s] %(name)s:%(lineno)-4d %(levelname)s: %(message)s",
+    # format  = "[%(asctime)s] %(name)s:%(lineno)-4d %(levelname)s: %(message)s",
+    format  = "[%(name)s:%(lineno)-4d] %(levelname)s: %(message)s",
     level   = logging.DEBUG,
-#   datefmt = "%Y-%m-%d %H:%M:%S",
+    # datefmt = "%Y-%m-%d %H:%M:%S",
     datefmt = "%H:%M:%S",
 )
 

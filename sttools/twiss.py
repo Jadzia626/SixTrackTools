@@ -26,9 +26,6 @@ class Twiss:
 
         self.STData = inData
 
-        if not self.STData.isNumPy:
-            self.STData.convertToNumpy()
-
         return
 
     def getTwiss(self, psDir, turnID=-1):
@@ -43,9 +40,8 @@ class Twiss:
             logger.error("Unreckognised direction '%s'" % psDir)
             return None
 
-        self.STData.filterTurn(turnID)
-        partPos = self.STData.fData[idxPos]
-        partAng = self.STData.fData[idxAng]
+        partPos = self.STData.filData[idxPos]
+        partAng = self.STData.filData[idxAng]
 
         mCov  = np.cov(np.vstack((partPos,partAng)))
         gEmit = sqrt(np.linalg.det(mCov))
@@ -65,4 +61,4 @@ class Twiss:
 
         return retVals
 
-## End Class Twiss    
+## End Class Twiss

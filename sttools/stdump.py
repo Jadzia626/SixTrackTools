@@ -170,7 +170,7 @@ class STDump:
                         self.idxData[cN].setdefault(spLine,[]).append(dataID)
             
             self.nLines = len(self.allData["ID"])
-            logger.info("%d lines of data read" % self.nLines)
+            logger.info("%d lines of data read from %s" % (self.nLines,self.fileName))
         
         # Convert columns to numpy arrays
         for i in range(len(self.colNames)):

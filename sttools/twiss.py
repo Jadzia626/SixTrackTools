@@ -3,11 +3,11 @@
 
   SixTrack Tools - Twiss Class
  ==============================
-  Twiss (emittance) related calculations
   By: Veronica Berglyd Olsen
       CERN (BE-ABP-HSS)
       Geneva, Switzerland
 
+  Twiss (emittance) related calculations
 """
 
 import logging

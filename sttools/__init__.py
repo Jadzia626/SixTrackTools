@@ -17,6 +17,8 @@ import logging
 from .stdump import STDump
 from .twiss  import Twiss
 
+logger = logging.getLogger(__name__)
+
 __all__ = ["STDump","Twiss"]
 
 # Package Meta
@@ -30,7 +32,7 @@ __maintainer__ = "Veronica Berglyd Olsen"
 __email__      = "v.k.b.olsen@cern.ch"
 __status__     = "Perpetual Development"
 
-logLevel = logging.INFO
+logLevel = logging.DEBUG
 
 if logLevel == logging.DEBUG:
     logging.basicConfig(

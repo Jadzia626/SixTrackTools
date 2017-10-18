@@ -3,11 +3,12 @@
 
   SixTrack Tools - Dump File Wrapper
  ====================================
-  Parses dump files and converts them to Numpy arrays
   By: Veronica Berglyd Olsen
       CERN (BE-ABP-HSS)
       Geneva, Switzerland
 
+  Parses dump files and converts them to Numpy arrays
+  
   This class will parse the SixTrack dump.txt file and any file with a similar structure.
   The only requirement is that the first column is the particle ID and the second column is the turn number.
 

@@ -3,11 +3,11 @@
 
   SixTrack Tools - Physics Functions
  ====================================
-  A set of basic calculation functions
   By: Veronica Berglyd Olsen
       CERN (BE-ABP-HSS)
       Geneva, Switzerland
 
+  A set of basic calculation functions
 """
 
 from math import sqrt, pi

@@ -13,3 +13,5 @@
 import sttools
 
 logger = logging.getLogger(__name__)
+
+from .hllhc12 import HLLHCv12

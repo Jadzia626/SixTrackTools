@@ -36,15 +36,13 @@ logLevel = logging.INFO
 
 if logLevel == logging.DEBUG:
     logging.basicConfig(
-        # format  = "[%(asctime)s] %(name)s:%(lineno)-4d %(levelname)s: %(message)s",
         format  = "[%(asctime)s] %(name)s:%(lineno)d %(levelname)s: %(message)s",
         level   = logging.DEBUG,
         datefmt = "%Y-%m-%d %H:%M:%S",
     )
 else:
     logging.basicConfig(
-        # format  = "[%(asctime)s] %(name)s:%(lineno)-4d %(levelname)s: %(message)s",
-        format  = "[%(module)s] %(levelname)s: %(message)s",
+        format  = "%(levelname)s: %(message)s",
         level   = logLevel,
         datefmt = "%H:%M:%S",
     )

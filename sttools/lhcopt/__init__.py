@@ -17,7 +17,7 @@ from os import path
 from sttools.functions import formatNumberExp
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+# logger.setLevel(logging.DEBUG)
 
 class LHCOptics():
     

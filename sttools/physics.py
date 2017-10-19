@@ -26,7 +26,6 @@ def calcLuminosity(bunchParticles, nBunches, revFrequency, beamGamma, normTEmitt
     sigmaStar      : Bunch transverse size in the interaction point
     """
     reductionFactor = 1 / sqrt(1 + ((crossingAngle*sigmaZ) / (2*sigmaStar)))
-    machineLuminosity = (bunchParticles**2 * nBunches * revFrequency * beamGamma)
-                      / (4*pi * normTEmittance * betaStar)
+    machineLuminosity = (bunchParticles**2 * nBunches * revFrequency * beamGamma) / (4*pi * normTEmittance * betaStar)
     
     return machineLuminosity * reductionFactor

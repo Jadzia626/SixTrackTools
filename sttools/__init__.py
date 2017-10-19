@@ -32,7 +32,7 @@ __maintainer__ = "Veronica Berglyd Olsen"
 __email__      = "v.k.b.olsen@cern.ch"
 __status__     = "Perpetual Development"
 
-logLevel = logging.DEBUG
+logLevel = logging.INFO
 
 if logLevel == logging.DEBUG:
     logging.basicConfig(

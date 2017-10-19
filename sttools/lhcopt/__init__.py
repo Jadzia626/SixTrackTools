@@ -187,48 +187,48 @@ class LHCOptics():
         print(" - Configuration: %s" % str(self.selConfig))
         print(" - Point:         %s" % str(self.selIP))
         print("")
-        print("Variable          Beam 1       Beam 2    Unit")
-        print("==============================================")
-        print("beamEnergy     %s  %s  [eV]" % (
+        print(" Variable          Beam 1       Beam 2    Unit")
+        print("================================================")
+        print(" beamEnergy     %s  %s  [eV]" % (
             formatNumberExp(self.beamEnergy[0]), formatNumberExp(self.beamEnergy[1])
         ))
-        print("partPerBunch   %s  %s  [N]" % (
+        print(" partPerBunch   %s  %s  [N]" % (
             formatNumberExp(self.partPerBunch[0]), formatNumberExp(self.partPerBunch[1])
         ))
-        print("nBunches       %-11s  %-11s  [N]" % (
+        print(" nBunches       %-11s  %-11s  [N]" % (
             ("%4d"%self.nBunches[0]), ("%4d"%self.nBunches[1])
         ))
-        print("normEmittance  %s  %s  [m]" % (
+        print(" normEmittance  %s  %s  [m]" % (
             formatNumberExp(self.normEmittance[0]), formatNumberExp(self.normEmittance[1])
         ))
-        print("betaStarX      %s  %s  [m]" % (
+        print(" betaStarX      %s  %s  [m]" % (
             formatNumberExp(self.betaStarX[0]), formatNumberExp(self.betaStarX[1])
         ))
-        print("betaStarY      %s  %s  [m]" % (
+        print(" betaStarY      %s  %s  [m]" % (
             formatNumberExp(self.betaStarY[0]), formatNumberExp(self.betaStarY[1])
         ))
-        print("posX           %s  %s  [m]" % (
+        print(" posX           %s  %s  [m]" % (
             formatNumberExp(self.posX[0]), formatNumberExp(self.posX[1])
         ))
-        print("posY           %s  %s  [m]" % (
+        print(" posY           %s  %s  [m]" % (
             formatNumberExp(self.posY[0]), formatNumberExp(self.posY[1])
         ))
-        print("crossingX      %s  %s  [rad]" % (
+        print(" crossingX      %s  %s  [rad]" % (
             formatNumberExp(self.crossingX[0]), formatNumberExp(self.crossingX[1])
         ))
-        print("crossingY      %s  %s  [rad]" % (
+        print(" crossingY      %s  %s  [rad]" % (
             formatNumberExp(self.crossingY[0]), formatNumberExp(self.crossingY[1])
         ))
-        print("tuneQX         %s  %s" % (
+        print(" tuneQX         %s  %s" % (
             formatNumberExp(self.tuneQX[0]), formatNumberExp(self.tuneQX[1])
         ))
-        print("tuneQY         %s  %s" % (
+        print(" tuneQY         %s  %s" % (
             formatNumberExp(self.tuneQY[0]), formatNumberExp(self.tuneQY[1])
         ))
-        print("tuneQPX        %s  %s" % (
+        print(" tuneQPX        %s  %s" % (
             formatNumberExp(self.tuneQPX[0]), formatNumberExp(self.tuneQPX[1])
         ))
-        print("tuneQPY        %s  %s" % (
+        print(" tuneQPY        %s  %s" % (
             formatNumberExp(self.tuneQPY[0]), formatNumberExp(self.tuneQPY[1])
         ))
         print("")

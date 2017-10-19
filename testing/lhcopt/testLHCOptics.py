@@ -14,11 +14,13 @@
 import logging
 import sttools
 
+from math import sqrt
 from sttools.lhcopt import LHCOptics
+from sttools.physics import calcLuminosity
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-lhcOpts = LHCOptics(LHCOptics.HLLHC1_0)
-lhcOpts.setConfigIP(0,LHCOptics.IP_1)
+lhcOpts = LHCOptics(LHCOptics.HLLHC1_2)
+lhcOpts.setConfigIP(5,LHCOptics.IP_1)
 lhcOpts.echoValues()

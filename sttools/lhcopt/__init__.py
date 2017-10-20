@@ -36,7 +36,11 @@ class LHCOptics():
     validVersions = [LHC2016, LHC2017, HLLHC1_0, HLLHC1_1, HLLHC1_2, HLLHC1_3]
     validIPs      = [IP_1, IP_2, IP_5, IP_8]
     
-    # Parameters
+    # Fixed Parameters
+    ringCircumf   = 26658.883
+    revFrequency  = 11245.499
+    
+    # Variable Parameters
     beamEnergy    = [None, None]
     partPerBunch  = [None, None]
     nBunches      = [None, None]

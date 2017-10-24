@@ -79,7 +79,7 @@ def get_rel_params(energy, mass=0.938272046e9):
     The energy has to be input in [eV] and the particle mass in [eV/c^2].
     If no mass is input, the proton mass will be taken by default.
     """
-    c = 2.99792485e8  # m/s
+    c = 299792458.0  # m/s
     gamma_rel = energy / mass
     beta_rel = np.sqrt(gamma_rel**2 - 1) / gamma_rel
     p0 = np.sqrt((energy - mass) * (energy + mass))
@@ -93,7 +93,7 @@ def get_bucket(machine, plot=True, z=0, DELTA=0):
     """
     mp = 0.938272046e9                     # proton mass, eV/c^2
     e  = 1.60217657e-19                    # C, electron charge
-    c  = 2.99792485e8                      # m/s, speed of light
+    c  = 299792458.0                       # m/s, speed of light
 
     if machine == "HL_coll" or machine == "HL_coll_tcp":
         h = 35640                          # RF harmonic number

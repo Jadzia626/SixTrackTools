@@ -37,7 +37,7 @@ def calcGammaBeta(partEnergy, partMass):
     lightSpeed = Const.SpeedOfLight
     
     partGamma    = partEnergy/partMass
-    partBeta     = sqrt(relGamma**2 - 1)/relGamma
+    partBeta     = sqrt(partGamma**2 - 1)/partGamma
     partMomentum = sqrt((partEnergy-partMass)*(partEnergy+partMass))
     
     return partGamma, partBeta, partMomentum

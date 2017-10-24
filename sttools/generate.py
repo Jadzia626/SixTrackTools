@@ -28,6 +28,17 @@ class Dist():
         
         keyVals = initData.keys()
         
+        self.partArrays = {
+            "x"    : [],
+            "xp"   : [],
+            "y"    : [],
+            "yp"   : [],
+            "z"    : [],
+            "d/dP" : [],
+            "E"    : [],
+            "dE/E" : [],
+        }
+        
         if "energy" in keyVals:
             self.beamEnergy = initData["energy"]
         else:
@@ -85,7 +96,7 @@ class Dist():
             logger.error("Value 'offset' must be a vector of [x,xp,y,yp] values")
             self.hasError = True
         
-        bG, bB, bP0 = calcGammaBeta(self.partEnergy=,self.partMass)
+        bG, bB, bP0 = calcGammaBeta(self.beamEnergy,self.partMass)
         self.beamGamma = bG
         self.beamBeta  = bB
         self.beamMom   = bP0
@@ -94,6 +105,45 @@ class Dist():
             gEmitX = self.normEmit[0]/(self.beamGamma*self.beamBeta)
             gEmitY = self.normEmit[1]/(self.beamGamma*self.beamBeta)
             self.geomEmit = [gEmitX,gEmitY]
+        
+        return
+    
+    def genDist(self, nPairs):
+        
+        self.genTransverseDist(nPairs)
+        
+        return
+    
+    def genTransverseDist(self, nPairs):
+        """Generate x,xp and y,yp bivariate distributions via covariance matrices
+        See: http://se.mathworks.com/help/matlab/ref/randn.html
+        """
+        
+        nPart  = nPairs * 2
+        
+        gEmitX = self.geomEmit[0]
+        gEmitY = self.geomEmit[1]
+        alphaX = self.twissAlpha[0]
+        alphaY = self.twissAlpha[1]
+        betaX  = self.twissBeta[0]
+        betaY  = self.twissBeta[1]
+        gammaX = 1+alphaX**2 / betaX
+        gammaY = 1+alphaY**2 / betaY
+        
+        covX   = np.matrix([[betaX, alphaX], [-alphaX, gammaX]])
+        covY   = np.matrix([[betaX, alphaY], [-alphaY, gammaY]])
+        
+        cholX  = np.linalg.cholesky(covX*gEmitX)
+        cholY  = np.linalg.cholesky(covY*gEmitY)
+        
+        distX  = np.random.normal(0, 1, (nPart,2))
+        distY  = np.random.normal(0, 1, (nPart,2))
+        
+        phspX  = distX*cholX
+        phspY  = distY*cholY
+        
+        print(phspX)
+        print(phspY)
         
         return
         

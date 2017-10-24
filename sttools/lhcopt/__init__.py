@@ -193,6 +193,12 @@ class LHCOptics():
         print("")
         print(" Variable          Beam 1       Beam 2    Unit")
         print("================================================")
+        print(" ringCircumf                 %s  [m]" % (
+            formatNumberExp(self.ringCircumf)
+        ))
+        print(" revFrequency                %s  [Hz]" % (
+            formatNumberExp(self.revFrequency)
+        ))
         print(" beamEnergy     %s  %s  [eV]" % (
             formatNumberExp(self.beamEnergy[0]), formatNumberExp(self.beamEnergy[1])
         ))

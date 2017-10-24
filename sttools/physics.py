@@ -11,6 +11,7 @@
 """
 
 from math import sqrt, pi
+from sttools.constants import Const
 
 def calcLuminosity(bunchParticles, nBunches, revFrequency, beamGamma, normTEmittance, betaStar,
                    crossingAngle, sigmaZ, sigmaStar):
@@ -29,3 +30,15 @@ def calcLuminosity(bunchParticles, nBunches, revFrequency, beamGamma, normTEmitt
     machineLuminosity = (bunchParticles**2 * nBunches * revFrequency * beamGamma) / (4*pi * normTEmittance * betaStar)
     
     return machineLuminosity * reductionFactor
+
+def calcGammaBeta(partEnergy, partMass):
+    """Calculates particle gamma, beta and momentum from total energy and mass"""
+    
+    lightSpeed = Const.SpeedOfLight
+    
+    partGamma    = partEnergy/partMass
+    partBeta     = sqrt(relGamma**2 - 1)/relGamma
+    partMomentum = sqrt((partEnergy-partMass)*(partEnergy+partMass))
+    
+    return partGamma, partBeta, partMomentum
+    

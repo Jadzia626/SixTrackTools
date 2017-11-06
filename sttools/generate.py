@@ -12,9 +12,11 @@
 """
 
 import logging
+import timeit
 import sttools
 import numpy as np
 
+from os                import path
 from sttools.constants import Const
 from sttools.physics   import calcGammaBeta
 
@@ -28,16 +30,13 @@ class Dist():
         
         keyVals = initData.keys()
         
-        self.partArrays = {
-            "x"    : [],
-            "xp"   : [],
-            "y"    : [],
-            "yp"   : [],
-            "z"    : [],
-            "d/dP" : [],
-            "E"    : [],
-            "dE/E" : [],
-        }
+        # Distributions
+        self.genXXP = None
+        self.genYYP = None
+        self.genZ   = None
+        self.genP   = None
+        self.genDDP = None
+        self.genE   = None
         
         if "energy" in keyVals:
             self.beamEnergy = initData["energy"]
@@ -73,6 +72,16 @@ class Dist():
             self.beamOffset = initData["offset"]
         else:
             self.beamOffset = [0.0, 0.0, 0.0, 0.0]
+        
+        if "sigmaz" in keyVals:
+            self.sigmaZ = initData["sigmaz"]
+        else:
+            self.sigmaZ = 0.0
+        
+        if "spreade" in keyVals:
+            self.spreadE = initData["spreade"]
+        else:
+            self.spreadE = 0.0
         
         # Check Values
         self.hasError = False
@@ -110,7 +119,12 @@ class Dist():
     
     def genDist(self, nPairs):
         
+        startTime = timeit.default_timer()
         self.genTransverseDist(nPairs)
+        self.genLongitudinalDist(nPairs)
+        timePassed = timeit.default_timer() - startTime
+        
+        logger.info("Generated %d particle pairs in %.4f sec" % (nPairs,timePassed))
         
         return
     
@@ -130,20 +144,81 @@ class Dist():
         gammaX = 1+alphaX**2 / betaX
         gammaY = 1+alphaY**2 / betaY
         
+        # Covariant matrices
         covX   = np.matrix([[betaX, alphaX], [-alphaX, gammaX]])
         covY   = np.matrix([[betaX, alphaY], [-alphaY, gammaY]])
         
+        # Cholesky decomposition
         cholX  = np.linalg.cholesky(covX*gEmitX)
         cholY  = np.linalg.cholesky(covY*gEmitY)
         
+        # Generate uncorrelated distributions
         distX  = np.random.normal(0, 1, (nPart,2))
         distY  = np.random.normal(0, 1, (nPart,2))
         
-        phspX  = distX*cholX
-        phspY  = distY*cholY
+        # Apply the Cholesky decomposition
+        self.genXXP = distX*cholX*1e3 # Unit mm, mrad
+        self.genYYP = distY*cholY*1e3 # Unit mm, mrad
         
-        print(phspX)
-        print(phspY)
+        return
+    
+    def genLongitudinalDist(self, nPairs):
+        
+        nPart = nPairs * 2
+        
+        self.genZ   = np.random.normal(0, 1, nPart) * self.sigmaZ
+        self.genE   = self.beamEnergy * (1 + np.random.normal(0, 1, nPart)*self.spreadE)
+        self.genP   = np.sqrt((self.genE - self.partMass) * (self.genE + self.partMass))
+        self.genDDP = (self.genP - self.beamMom) / self.beamMom
+        
+        self.genZ  *= 1e3  # Unit mm
+        self.genE  *= 1e-6 # Unit MeV
+        
+        return
+    
+    def writeFort13(self, outPath, nPairs):
+        
+        startTime = timeit.default_timer()
+        
+        if not path.isdir(outPath):
+            logger.error("Path not found: %s" % outPath)
+            return
+            
+        if nPairs*2 > len(self.genXXP):
+            logger.error("Cannot output more particle pairs than has been generated")
+            return
+        
+        beamEnergy = self.beamEnergy * 1e-6 # Unit MeV
+        outFile = path.join(outPath, "fort.13")
+        with open(outFile, "w") as fort13:
+            for i in range(nPairs):
+                p1 = i*2
+                p2 = p1+1
+                
+                # Particle 1
+                fort13.write("%19.12e\n" % self.genXXP[p1,0])
+                fort13.write("%19.12e\n" % self.genXXP[p1,1])
+                fort13.write("%19.12e\n" % self.genYYP[p1,0])
+                fort13.write("%19.12e\n" % self.genYYP[p1,1])
+                fort13.write("%19.12e\n" % self.genZ[p1])
+                fort13.write("%19.12e\n" % self.genDDP[p1])
+                
+                # Particle 2
+                fort13.write("%19.12e\n" % self.genXXP[p2,0])
+                fort13.write("%19.12e\n" % self.genXXP[p2,1])
+                fort13.write("%19.12e\n" % self.genYYP[p2,0])
+                fort13.write("%19.12e\n" % self.genYYP[p2,1])
+                fort13.write("%19.12e\n" % self.genZ[p2])
+                fort13.write("%19.12e\n" % self.genDDP[p2])
+                
+                # Energy
+                fort13.write("%19.12e\n" % beamEnergy)
+                fort13.write("%19.12e\n" % self.genE[p1])
+                fort13.write("%19.12e\n" % self.genE[p2])
+                
+        timePassed = timeit.default_timer() - startTime
+        
+        logger.info("Wrote %d particle pairs to file in %.4f sec" % (nPairs,timePassed))
         
         return
         

@@ -183,7 +183,7 @@ class Dist():
         if not path.isdir(outPath):
             logger.error("Path not found: %s" % outPath)
             return
-            
+        
         if nPairs*2 > len(self.genXXP):
             logger.error("Cannot output more particle pairs than has been generated")
             return
@@ -196,25 +196,25 @@ class Dist():
                 p2 = p1+1
                 
                 # Particle 1
-                fort13.write("%19.12e\n" % self.genXXP[p1,0])
-                fort13.write("%19.12e\n" % self.genXXP[p1,1])
-                fort13.write("%19.12e\n" % self.genYYP[p1,0])
-                fort13.write("%19.12e\n" % self.genYYP[p1,1])
-                fort13.write("%19.12e\n" % self.genZ[p1])
-                fort13.write("%19.12e\n" % self.genDDP[p1])
+                fort13.write("%22.15e\n" % self.genXXP[p1,0])
+                fort13.write("%22.15e\n" % self.genXXP[p1,1])
+                fort13.write("%22.15e\n" % self.genYYP[p1,0])
+                fort13.write("%22.15e\n" % self.genYYP[p1,1])
+                fort13.write("%22.15e\n" % self.genZ[p1])
+                fort13.write("%22.15e\n" % self.genDDP[p1])
                 
                 # Particle 2
-                fort13.write("%19.12e\n" % self.genXXP[p2,0])
-                fort13.write("%19.12e\n" % self.genXXP[p2,1])
-                fort13.write("%19.12e\n" % self.genYYP[p2,0])
-                fort13.write("%19.12e\n" % self.genYYP[p2,1])
-                fort13.write("%19.12e\n" % self.genZ[p2])
-                fort13.write("%19.12e\n" % self.genDDP[p2])
+                fort13.write("%22.15e\n" % self.genXXP[p2,0])
+                fort13.write("%22.15e\n" % self.genXXP[p2,1])
+                fort13.write("%22.15e\n" % self.genYYP[p2,0])
+                fort13.write("%22.15e\n" % self.genYYP[p2,1])
+                fort13.write("%22.15e\n" % self.genZ[p2])
+                fort13.write("%22.15e\n" % self.genDDP[p2])
                 
                 # Energy
-                fort13.write("%19.12e\n" % beamEnergy)
-                fort13.write("%19.12e\n" % self.genE[p1])
-                fort13.write("%19.12e\n" % self.genE[p2])
+                fort13.write("%22.15e\n" % beamEnergy)
+                fort13.write("%22.15e\n" % self.genE[p1])
+                fort13.write("%22.15e\n" % self.genE[p2])
                 
         timePassed = timeit.default_timer() - startTime
         

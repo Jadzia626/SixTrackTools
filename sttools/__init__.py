@@ -48,4 +48,4 @@ else:
     )
 
 if __name__ == '__main__':
-    print("SixTrack Tools")
+    print("SixTrack Toolbox for Python 3")

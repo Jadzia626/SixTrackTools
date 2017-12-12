@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*
 """TFS File Parser
 
-  Mad-X Tools - TFS File Parser
- ===============================
-  Parses TFS files and converts them to Numpy arrays
+  SixTrack Tools - TFS File Parser
+ ==================================
+  Parses MadX TFS files and converts them to Numpy arrays
   By: Veronica Berglyd Olsen
       CERN (BE-ABP-HSS)
       Geneva, Switzerland
 
   Based on Kyrre Ness Sjøbæk's class TwissTable.py
   https://github.com/kyrsjo/MadxTools
-
   Updated to work with Python3
 
 """

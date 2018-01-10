@@ -14,8 +14,9 @@
 import logging
 
 # Submodules
-from .stdump import STDump
-from .twiss  import Twiss
+from .stdump  import STDump
+from .tablefs import TableFS
+from .twiss   import Twiss
 
 logger = logging.getLogger(__name__)
 

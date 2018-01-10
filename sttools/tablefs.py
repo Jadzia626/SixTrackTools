@@ -18,6 +18,8 @@ import logging
 import numpy   as np
 import re
 
+from os import path
+
 logger = logging.getLogger(__name__)
 
 class TableFS:
@@ -33,13 +35,16 @@ class TableFS:
     
     def __init__(self, fileName):
         
-        self.fileName = fileName
-        self.metaData = {}
-        self.varNames = []
-        self.varTypes = []
-        self.Data     = {}
+        self.fileName   = fileName
+        self.metaData   = {}
+        self.metaTypes  = {}
+        self.varNames   = []
+        self.varTypes   = []
+        self.Data       = {}
         
-        self.nLines   = 0
+        self.nLines     = 0
+        
+        self.fileLoaded = False
         
         # Read File
         with open(fileName,'r') as tfsFile:
@@ -48,17 +53,20 @@ class TableFS:
                 
                 # Metadata
                 if tfsLine[0] == "@":
-                    spLines = tfsLine.split()[1:]
+                    spLines = tfsLine.split(None,3)[1:]
                     if   spLines[1][-1] == "d":
-                        self.metaData[spLines[0]] = int(spLines[2])
+                        self.metaData[spLines[0]]  = int(spLines[2].strip())
+                        self.metaTypes[spLines[0]] = "int"
                     elif spLines[1][-1] == "e":
-                        self.metaData[spLines[0]] = float(spLines[2])
+                        self.metaData[spLines[0]]  = float(spLines[2].strip())
+                        self.metaTypes[spLines[0]] = "float"
                     elif spLines[1][-1] == "s":
-                        self.metaData[spLines[0]] = self.stripQuotes(spLines[2])
+                        self.metaData[spLines[0]]  = self.stripQuotes(spLines[2].strip())
+                        self.metaTypes[spLines[0]] = "str"
                     else:
-                        logger.error("Unknown type '%s' for metadata variable '%s'" % (spLines[1], spLines[2]))
+                        logger.error("Unknown type '%s' for metadata variable '%s'" % (spLines[1], spLines[2].strip()))
                         return False
-                        
+                    
                 # Header/Variable Names
                 elif tfsLine[0] == "*":
                     spLines = tfsLine.split()[1:]
@@ -83,17 +91,8 @@ class TableFS:
                     self.nLines += 1
                 
             logger.info("%d lines of data read" % self.nLines)
-            
-        assert self.nLines == len(self.Data["NAME"])
         
-        return
-        
-        
-    def convertToNumpy(self):
-        """
-        Convert data to NumPy arrays
-        """
-        
+        # Converting arrays to Numpy
         for i in range(len(self.varNames)):
             
             vN = self.varNames[i]
@@ -107,9 +106,57 @@ class TableFS:
                 self.Data[vN] = np.asarray(self.Data[vN],dtype="str")
             else:
                 logger.error("Unknown type '%s' for variable '%s'" % (vT, vN))
-                return False
+                return
             
-        return True
+        if self.nLines == len(self.Data["NAME"]):
+            self.fileLoaded = True
+        else:
+            logger.error("")
+        
+        return
+    
+    def fileInfo(self):
+        
+        if not self.fileLoaded:
+            logger.error("No TFS file loaded")
+            return
+        
+        print("")
+        print(" TFS File Summary ")
+        print("******************")
+        print("")
+        
+        print(" File Info: ")
+        print("")
+        print(" %10s = %s" % ("Name",path.basename(self.fileName)))
+        print(" %10s = %s" % ("Path",path.dirname(self.fileName)))
+        print(" %10s = %.2f kB" % ("Size",path.getsize(self.fileName)/1024))
+        print(" %10s = %d" % ("Lines",self.nLines))
+        print("")
+        
+        print(" Meta Data: ")
+        print("")
+        for metaName in self.metaData.keys():
+            if   self.metaTypes[metaName] == "int":
+                print(" %10s = %d" % (metaName,self.metaData[metaName]))
+            elif self.metaTypes[metaName] == "float":
+                print(" %10s = %22.15e" % (metaName,self.metaData[metaName]))
+            elif self.metaTypes[metaName] == "str":
+                print(" %10s = \"%s\"" % (metaName,self.metaData[metaName]))
+        print("")
+        
+        print(" Data Headers: ")
+        print("")
+        for (vN,vT) in zip(self.varNames,self.varTypes):
+            if   vT[-1] == "s":
+                print(" %10s = string" % vN)
+            elif vT[-1] == "d":
+                print(" %10s = integer" % vN)
+            elif vT[-1] == "e":
+                print(" %10s = float" % vN)
+        print("")
+        
+        return
         
     def slicedRebuild(self, maxSearch=None):
         """

@@ -49,7 +49,7 @@ class Aperture:
         
         return
     
-    def parseApertures(self):
+    def parseAperture(self):
         
         # Pre-allocate arrays
         self.aperN = self.aperData.nLines

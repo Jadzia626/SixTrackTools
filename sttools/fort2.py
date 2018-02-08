@@ -91,7 +91,7 @@ class Fort2():
                     whatStage = 0
                 
                 # This is a temporary fix while waiting for MadX Pull Request #552 to be merged
-                theLine   = theLine.replace("_AP   3   1.000000000e-08","_AP   0   0.000000000e+00")
+                theLine   = theLine.replace("   3   1.000000000e-08","   0   0.000000000e+00")
                 lineElems = theLine.split()
                 if whatStage == 1:
                     if len(lineElems) == 8:
@@ -167,7 +167,7 @@ class Fort2():
             # Writing Structure Input
             outFile.write(self.nameStruct+"-"*57+"\n")
             for e in range(len(self.structData)):
-                outFile.write(("{:<24s}").format(self.structData[e]))
+                outFile.write(("{:<24s} ").format(self.structData[e]))
                 if e > 0 and e%3 == 2:
                     outFile.write("\n")
             if not e%3 == 2:
@@ -194,6 +194,11 @@ class Fort2():
             else:
                 logger.error("Marker named '%s' not found" % inName)
                 return False
+        elif isinstance(inRef,int):
+            pass
+        else:
+            logger.error("inRef must be either string or integer")
+            return False
         
         if inRef < 0 or inRef >= len(self.elemData["Name"]):
             logger.error("Index out of bounds")
@@ -237,6 +242,11 @@ class Fort2():
             else:
                 logger.error("Marker named '%s' not found" % inName)
                 return False
+        elif isinstance(inRef,int):
+            pass
+        else:
+            logger.error("inRef must be either string or integer")
+            return False
         
         if inRef < 0 or inRef >= len(self.structData):
             logger.error("Index out of bounds")

@@ -57,6 +57,8 @@ def testInsertElementBreak():
     assert not fTwo.insertElement("values-wrong",0,[0,0,0,0,0],1,1)
     assert not fTwo.insertElement("duplicate",0,[0,0,0,0,0,0],"duplicate",1)
     assert not fTwo.insertElement("non-existent",0,[0,0,0,0,0,0],"what?",1)
+    assert not fTwo.insertElement("silly-index",0,[0,0,0,0,0,0],None,1)
+    assert not fTwo.insertElement("silly-index",0,[0,0,0,0,0,0],0.0,1)
     
 def testInsertStructOK():
     assert fTwo.insertStruct("ip3_num",0,1)
@@ -70,6 +72,8 @@ def testInsertStructBreak():
     assert not fTwo.insertStruct("off-too-large",3335,10)
     assert not fTwo.insertStruct("duplicate","duplicate",1)
     assert not fTwo.insertStruct("non-existent","what?",1)
+    assert not fTwo.insertStruct("silly-index",None,1)
+    assert not fTwo.insertStruct("silly-index",0.0,1)
 
 def testSaveFile():
     assert fTwo.saveFile()

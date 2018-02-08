@@ -37,3 +37,14 @@ def testBlockSize():
 def testStructSize():
     assert len(fTwo.structData) == 3337
 
+def testInsertElementOK():
+    assert fTwo.insertElement("ip3_num",0,[0,0,0,0,0,0],0,1)
+    assert fTwo.insertElement("ip3_str",0,[0,0,0,0,0,0],"ip3",2)
+    assert len(fTwo.elemData["Name"]) == 185
+    assert len(fTwo.elemData["Type"]) == 185
+    assert len(fTwo.elemData["Val1"]) == 185
+    assert len(fTwo.elemData["Val2"]) == 185
+    assert len(fTwo.elemData["Val3"]) == 185
+    assert len(fTwo.elemData["Val4"]) == 185
+    assert len(fTwo.elemData["Val5"]) == 185
+    assert len(fTwo.elemData["Val6"]) == 185

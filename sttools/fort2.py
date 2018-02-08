@@ -90,6 +90,8 @@ class Fort2():
                 elif theLine[0:4]  == "NEXT":
                     whatStage = 0
                 
+                # This is a temporary fix while waiting for MadX Pull Request #552 to be merged
+                theLine   = theLine.replace("_AP   3   1.000000000e-08","_AP   0   0.000000000e+00")
                 lineElems = theLine.split()
                 if whatStage == 1:
                     if len(lineElems) == 8:
@@ -124,6 +126,49 @@ class Fort2():
         self.blockData["Block"] = np.asarray(self.blockData["Block"],dtype="str")
         self.blockData["Drift"] = np.asarray(self.blockData["Drift"],dtype="str")
         self.structData         = np.asarray(self.structData[:],     dtype="str")
+        
+        return True
+        
+    def insertElement(self, inName, inType, inValues, inRef, inOffset=0):
+        """
+        Inserts a new marker before the element inRef.
+        If inRef is a string, the index of the marker matching the string is used.
+        inOffset can be used to offset this, i.e. an inOffset of 1 will insert the
+        marker immediately after the inRef point instead of before (inOffset = 0).
+        """
+        
+        if isinstance(inRef,str):
+            arrRef = np.where(self.elemData["Name"] == inRef)
+            if len(arrRef) == 1:
+                inRef = arrRef[0]
+            elif len(arrRef) > 1:
+                logger.error("More than one marker named '%s' found" % inName)
+                return False
+            else:
+                logger.error("Marker named '%s' not found" % inName)
+                return False
+        
+        if inRef < 0 or inRef >= len(self.elemData["Name"]):
+            logger.error("Index out of bounds")
+            return False
+        
+        inPos = inRef + inOffset
+        if inPos < 0 or inPos >= len(self.elemData["Name"]):
+            logger.error("Index + offset out of bounds")
+            return False
+        
+        if not len(inValues) == 6:
+            logger.error("Value inValues must be an array of six floats")
+            return False
+        
+        self.elemData["Name"] = np.insert(self.elemData["Name"],inPos,inName)
+        self.elemData["Type"] = np.insert(self.elemData["Type"],inPos,inType)
+        self.elemData["Val1"] = np.insert(self.elemData["Val1"],inPos,inValues[0])
+        self.elemData["Val2"] = np.insert(self.elemData["Val2"],inPos,inValues[1])
+        self.elemData["Val3"] = np.insert(self.elemData["Val3"],inPos,inValues[2])
+        self.elemData["Val4"] = np.insert(self.elemData["Val4"],inPos,inValues[3])
+        self.elemData["Val5"] = np.insert(self.elemData["Val5"],inPos,inValues[4])
+        self.elemData["Val6"] = np.insert(self.elemData["Val6"],inPos,inValues[5])
         
         return True
     

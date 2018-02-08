@@ -1,59 +1,64 @@
 # -*- coding: utf-8 -*
-"""Markers Parser
+"""Fort.2 File Wrapper
 
-  SixTrack Tools - Markers Parser
- =================================
-  Parses MadX to SixTrack fc.2 files and related
+  SixTrack Tools - Fort.2 File Wrapper
+ ====================================
   By: Veronica Berglyd Olsen
       CERN (BE-ABP-HSS)
       Geneva, Switzerland
+
+  Parses and manipulates the SixTrack fort.2 file
 
 """
 
 import logging
 import numpy   as np
-import re
 
 from os import path
 
 logger = logging.getLogger(__name__)
 
-class Markers:
+class Fort2():
     
-    inPath     = None
+    filePath   = None
+    fileName   = None
+    fileExists = None
     
     elemData   = []
     blockData  = []
     structData = []
     
-    def __init__(self, inPath):
+    def __init__(self, filePath, fileName="fort.2"):
         
         # Set constants and defaults
         self.nameElem   = "SINGLE ELEMENTS"
         self.nameBlock  = "BLOCK DEFINITIONS"
         self.nameStruct = "STRUCTURE INPUT"
         
-        if path.isdir(inPath):
-            self.inPath = inPath
+        self.fileExists = False
+        
+        if path.isdir(filePath):
+            self.filePath = filePath
         else:
-            logger.error("Path not found or not a folder: %s" % inPath)
-            return
+            logger.error("Path not found: %s", filePath)
+        
+        if path.isfile(path.join(filePath,fileName)):
+            self.fileName   = fileName
+            self.fileExists = True
+        else:
+            logger.error("Found no %s file in path", fileName)
         
         return
     
-    def readFort2(self):
+    def loadFile(self):
         
-        if self.inPath is None:
-            logger.error("No path specified.")
+        if not self.fileExists:
+            logger.error("No valid file specified")
             return False
         
-        fort2File = path.join(self.inPath,"fort.2")
-        
-        if not path.isfile(fort2File):
-            logger.error("No fort.2 file found in %s" % self.inPath)
-            return False
-        
+        fort2File = path.join(self.filePath,self.fileName)
         whatStage = 0
+        
         with open(fort2File,"r") as inFile:
             for theLine in inFile:
                 if   theLine[0:15] == self.nameElem:
@@ -77,10 +82,8 @@ class Markers:
                     continue
                 elif whatStage == 3:
                     lineElems = theLine.split()
-                    arrStruct.append(lineElems[e])
-            
+                    self.structData.append(lineElems[:])
         
         return True
     
-# END Class
-    
+# END Fort2

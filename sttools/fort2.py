@@ -138,7 +138,7 @@ class Fort2():
         """
         
         if isinstance(inRef,str):
-            arrRef = np.where(self.elemData["Name"] == inRef)
+            arrRef, = np.where(self.elemData["Name"] == inRef)
             if len(arrRef) == 1:
                 inRef = arrRef[0]
             elif len(arrRef) > 1:
@@ -172,4 +172,36 @@ class Fort2():
         
         return True
     
+    def insertStruct(self, inName, inRef, inOffset=0):
+        """
+        Inserts a new marker before the structure inRef.
+        If inRef is a string, the index of the marker matching the string is used.
+        inOffset can be used to offset this, i.e. an inOffset of 1 will insert the
+        marker immediately after the inRef point instead of before (inOffset = 0).
+        """
+        
+        if isinstance(inRef,str):
+            arrRef, = np.where(self.structData == inRef)
+            if len(arrRef) == 1:
+                inRef = arrRef[0]
+            elif len(arrRef) > 1:
+                logger.error("More than one marker named '%s' found" % inName)
+                return False
+            else:
+                logger.error("Marker named '%s' not found" % inName)
+                return False
+        
+        if inRef < 0 or inRef >= len(self.structData):
+            logger.error("Index out of bounds")
+            return False
+        
+        inPos = inRef + inOffset
+        if inPos < 0 or inPos >= len(self.structData):
+            logger.error("Index + offset out of bounds")
+            return False
+        
+        self.structData = np.insert(self.structData,inPos,inName)
+        
+        return True
+        
 # END Fort2

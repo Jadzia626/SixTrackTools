@@ -10,12 +10,12 @@
 
 import filecmp as fcmp
 
-from os      import path
+from os      import path, unlink
 from sttools import Fort2
 
 currPath = path.dirname(path.realpath(__file__))
 
-fTwo = Fort2(currPath,"fort.2.ref")
+fTwo = Fort2(currPath,"fort.2.input")
 
 def testFileLoad():
     assert fTwo.loadFile()
@@ -70,4 +70,12 @@ def testInsertStructBreak():
     assert not fTwo.insertStruct("off-too-large",3335,10)
     assert not fTwo.insertStruct("duplicate","duplicate",1)
     assert not fTwo.insertStruct("non-existent","what?",1)
-        
+
+def testSaveFile():
+    assert fTwo.saveFile()
+    assert fcmp.cmp(
+        path.join(currPath,"fort.2.ref"),
+        path.join(currPath,"fort.2"),
+        shallow=False
+    )
+    unlink(path.join(currPath,"fort.2"))

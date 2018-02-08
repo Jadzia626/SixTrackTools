@@ -128,6 +128,53 @@ class Fort2():
         self.structData         = np.asarray(self.structData[:],     dtype="str")
         
         return True
+    
+    def saveFile(self, savePath=None, saveFile="fort.2"):
+        
+        if savePath is None:
+            savePath = self.filePath
+        
+        if not path.isdir(savePath):
+            logger.error("Path not found: %s" & savePath)
+            return False
+        
+        with open(path.join(savePath,saveFile),"w") as outFile:
+            
+            # Writing Single Elements
+            outFile.write(self.nameElem+"-"*57+"\n")
+            for e in range(len(self.elemData["Name"])):
+                outFile.write(("{:<24s} {:3d}"+" {: 17.9e}"*6+"\n").format(
+                    self.elemData["Name"][e],
+                    self.elemData["Type"][e],
+                    self.elemData["Val1"][e],
+                    self.elemData["Val2"][e],
+                    self.elemData["Val3"][e],
+                    self.elemData["Val4"][e],
+                    self.elemData["Val5"][e],
+                    self.elemData["Val6"][e],
+                ))
+            outFile.write("NEXT\n")
+            
+            # Writing Block Definitions
+            outFile.write(self.nameBlock+"-"*55+"\n")
+            for e in range(len(self.blockData["Block"])):
+                outFile.write(("{:<24s} {:<24s}\n").format(
+                    self.blockData["Block"][e],
+                    self.blockData["Drift"][e],
+                ))
+            outFile.write("NEXT\n")
+            
+            # Writing Structure Input
+            outFile.write(self.nameStruct+"-"*57+"\n")
+            for e in range(len(self.structData)):
+                outFile.write(("{:<24s}").format(self.structData[e]))
+                if e > 0 and e%3 == 2:
+                    outFile.write("\n")
+            if not e%3 == 2:
+                outFile.write("\n")
+            outFile.write("NEXT\n")
+        
+        return True
         
     def insertElement(self, inName, inType, inValues, inRef, inOffset=0):
         """

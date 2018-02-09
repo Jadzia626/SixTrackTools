@@ -21,30 +21,39 @@ logger = logging.getLogger(__name__)
 
 class Aperture:
     
-    fileName   = None
-    fileLoaded = None
+    filePath   = None # Folder where aperture file is saved
+    fileName   = None # Name of aperture file
+    fileLoaded = None # Set to True after file is successfully loaded
     
-    aperData   = None
+    typePath   = None # The path for custom apertypes
+    
+    aperData   = None # The aperture file data (TableFS object)
     aperS      = None # Position along the beam line
     aperX      = None # Horisontal aperture limits
     aperY      = None # Vertical aperture limits
     aperN      = None # Number of elements
     
-    def __init__(self, fileName):
+    customAper = None # Storage for custom apertypes
+    
+    def __init__(self, filePath, fileName):
         
+        # Defaults
         self.fileLoaded = False
-        self.filterOpts = {
-            
-        }
+        self.filterOpts = {}
         
-        if path.isfile(fileName):
-            logger.info("Loading file %s" % path.basename(fileName))
+        if path.isdir(filePath):
+            self.filePath = filePath
+            self.typePath = filePath
         else:
-            logger.error("File not found %s" % fileName)
-            return
+            logger.error("Path not found: %s", filePath)
         
-        self.fileName   = fileName
-        self.aperData   = TableFS(self.fileName)
+        if path.isfile(path.join(filePath,fileName)):
+            self.fileName = fileName
+            logger.info("Loading file %s" % fileName)
+        else:
+            logger.error("Found no %s file in path", fileName)
+        
+        self.aperData   = TableFS(path.join(self.filePath,self.fileName))
         self.fileLoaded = True
         
         return
@@ -88,6 +97,45 @@ class Aperture:
                 self.aperX[n] = 9.999
                 self.aperY[n] = 9.999
         
-        return
+        return True
+    
+    def customAperture(self, aperType):
+        
+        fnOrig  = path.join(self.typePath,aperType)
+        fnLower = path.join(self.typePath,aperType.lower())
+        fnUpper = path.join(self.typePath,aperType.upper())
+        
+        if   path.isfile(fnOrig):
+            toLoad = fnOrig
+        elif path.isfile(fnLower):
+            toLoad = fnLower
+        elif path.isfile(fnUpper):
+            toLoad = fnUpper
+        else:
+            logger.error("No file matching apertype '%s' found in folder: %s" % (aperType,self.typePath))
+            logger.error("If files are stored elsewhere, set the correct path with method setTypePath()")
+            return False
+        
+        with open(toLoad,"r") as inFile:
+            for theLine in inFile:
+                pass
+                
+        
+        return True
+    
+    #
+    # Setters and Getters
+    #
+    
+    def setTypePath(self, typePath):
+        
+        if not path.isdir(typePath):
+            logger.error("Path not found: %s" % typePath)
+            return False
+            
+        self.typePath = typePath
+        logger.info("Custom apertype path is: %s" % typePath)
+        
+        return True
     
 # END Class Aperture

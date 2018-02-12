@@ -19,5 +19,5 @@ lhcAper = Aperture(currPath,"aperture.tfs.input")
 
 def testFileParse():
     assert lhcAper.parseAperture()
-    assert False
+    #assert False
 

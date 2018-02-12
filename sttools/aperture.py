@@ -40,6 +40,7 @@ class Aperture:
         # Defaults
         self.fileLoaded = False
         self.filterOpts = {}
+        self.customAper = {}
         
         if path.isdir(filePath):
             self.filePath = filePath
@@ -93,13 +94,24 @@ class Aperture:
                 self.aperX[n] = 0.0
                 self.aperY[n] = 0.0
             else:
-                logger.warning("Unhandled APERTYPE '%s'" % aperType)
-                self.aperX[n] = 9.999
-                self.aperY[n] = 9.999
+                wasFound, aperData = self.customAperture(aperType)
+                if wasFound:
+                    # This assumes the shape is an octagon:
+                    self.aperX[n] = aperData["MaxX"]
+                    self.aperY[n] = aperData["MaxY"]
+                else:
+                    logger.warning("Unhandled APERTYPE '%s'" % aperType)
+                    self.aperX[n] = 9.999
+                    self.aperY[n] = 9.999
         
         return True
     
     def customAperture(self, aperType):
+        
+        if aperType in self.customAper.keys():
+            return True, self.customAper[aperType]
+        else:
+            logger.info("Unknown apertype '%s', looking for definition file", aperType)
         
         fnOrig  = path.join(self.typePath,aperType)
         fnLower = path.join(self.typePath,aperType.lower())
@@ -114,14 +126,32 @@ class Aperture:
         else:
             logger.error("No file matching apertype '%s' found in folder: %s" % (aperType,self.typePath))
             logger.error("If files are stored elsewhere, set the correct path with method setTypePath()")
-            return False
+            return False, None
+        
+        logger.info("Found aperture file '%s'" % path.basename(toLoad))
+        
+        xCoords = []
+        yCoords = []
         
         with open(toLoad,"r") as inFile:
             for theLine in inFile:
-                pass
-                
+                xySplit = theLine.split()
+                if len(xySplit) == 2:
+                    xCoords.append(xySplit[0])
+                    yCoords.append(xySplit[1])
         
-        return True
+        xCoords = np.asarray(xCoords,dtype="float")
+        yCoords = np.asarray(yCoords,dtype="float")
+        
+        aperData = {
+            "X"    : xCoords,
+            "Y"    : yCoords,
+            "MaxX" : max(abs(xCoords)),
+            "MaxY" : max(abs(yCoords)),
+        }
+        self.customAper[aperType] = aperData
+        
+        return True, aperData
     
     #
     # Setters and Getters

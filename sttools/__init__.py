@@ -16,11 +16,12 @@ import logging
 # Submodules
 from .aperture import Aperture
 from .fort2    import Fort2
+from .fort3    import Fort3
 from .stdump   import STDump
 from .tablefs  import TableFS
 from .twiss    import Twiss
 
-__all__ = ["Aperture","Fort2","STDump","TableFS","Twiss"]
+__all__ = ["Aperture","Fort2","Fort3","STDump","TableFS","Twiss"]
 
 # Package Meta
 __author__     = "Veronica Berglyd Olsen"

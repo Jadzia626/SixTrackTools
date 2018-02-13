@@ -26,7 +26,10 @@ class Fort3():
     
     blockOrder = None # Original order of blocks
     blockData  = None # Data of blocks
-    isGeom     = None # Treue for GEOM, False for FREE
+    currBlock  = None # Name of block being parsed
+    isGeom     = None # True for GEOM, False for FREE
+    doPrint    = None # Whether the PRINT leyword is present
+    isEnded    = None # Whether ENDE keyword has been encountered
     
     def __init__(self, filePath, fileName="fort.3"):
         
@@ -34,6 +37,9 @@ class Fort3():
         
         self.blockOrder = []
         self.blockData  = {}
+        self.isGeom     = None
+        self.doPrint    = False
+        self.isEnded    = False
         
         if path.isdir(filePath):
             self.filePath = filePath
@@ -54,44 +60,46 @@ class Fort3():
             logger.error("No valid file specified")
             return False
         
-        fort3File = path.join(self.filePath,self.fileName)
-        whatLine  = 0
-        inBlock   = False
-        hasEnde   = False
+        fort3File  = path.join(self.filePath,self.fileName)
+        whatLine   = 0
+        inBlock    = False
+        currBlock  = ""
+        blockBuff  = []
+        noNext     = ["GEOM","FREE","PRIN"]
         
         with open(fort3File,"r") as inFile:
             for theLine in inFile:
                 whatLine += 1
                 theLine   = theLine.strip()
+                toCheck   = theLine[0:4].upper()
                 
                 # Skipping comment lines
                 if theLine[0] == "/":
                     continue
                 
-                toCheck = theLine[0:4].upper()
+                blockBuff.append(theLine)
+                
                 if not inBlock:
-                    inBlock = True
-                    if toCheck == "GEOM":
-                        logger.info("Found GEOM keyword")
-                        self.isGeom = True
-                        inBlock = False
-                    elif toCheck == "FREE":
-                        logger.info("Found FREE keyword")
-                        self.isGeom = False
-                        inBlock = False
-                    elif toCheck == "ENDE":
-                        logger.info("Found ENDE keyword")
-                        inBlock = False
-                        hasEnde = True
-                        break
+                    if toCheck in noNext:
+                        self.blockOrder.append(toCheck)
+                        self.blockData[toCheck] = {}
+                        self.blockData[toCheck]["Lines"] = blockBuff
+                        inBlock   = False
+                        blockBuff = []
                     else:
-                        logger.info("Found %s block (not parsed)" % toCheck)
+                        self.blockOrder.append(toCheck)
+                        self.blockData[toCheck] = {}
+                        inBlock   = True
+                        currBlock = toCheck
                 else:
                     if toCheck == "NEXT":
-                        logger.info("End of block")
-                        inBlock = False
+                        self.blockData[currBlock]["Lines"] = blockBuff
+                        inBlock   = False
+                        blockBuff = []
+                    elif toCheck == "ENDE":
+                        self.isEnded = True
+                        break
         
-       
         return True
     
     def saveFile(self, savePath=None, saveFile="fort.3"):
@@ -104,9 +112,37 @@ class Fort3():
             return False
         
         with open(path.join(savePath,saveFile),"w") as outFile:
-            
-            pass
+            for theBlock in self.blockOrder:
+                if "Lines" in self.blockData[theBlock].keys():
+                    for theLine in self.blockData[theBlock]["Lines"]:
+                        outFile.write(theLine+"\n")
+                elif theBlock == "ENDE":
+                    outFile.write("ENDE\n")
+                else:
+                    logger.error("Empty block encountered in buffer")
         
         return True
+    
+    def appendToBlock(self, whichBlock, whichLine, newData):
         
+        if not whichBlock in self.blockOrder:
+            logger.error("No block named %s found" % whichBlock)
+            return False
+        
+        if not "Lines" in self.blockData[whichBlock].keys():
+            logger.error("No block data for block %s" % whichBlock)
+            return False
+        
+        nLines = len(self.blockData[whichBlock]["Lines"])
+        if whichLine == -1:
+            whichLine = nLines-1
+        if whichLine <= 0 or whichLine > nLines-1:
+            logger.error("Line number out of bounds")
+            logger.error("Valid range is 1 to %d or -1 for end" % (nLines-1))
+            return False
+        
+        self.blockData[whichBlock]["Lines"].insert(whichLine,newData)
+        
+        return True
+    
 # END Fort3

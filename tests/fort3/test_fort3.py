@@ -19,4 +19,23 @@ fThree = Fort3(currPath,"fort.3.input")
 
 def testFileLoad():
     assert fThree.loadFile()
-    assert False
+
+def testAddLinesOK():
+    assert fThree.appendToBlock("DUMP", 1,"ip1  1 650 2 dump.txt 1 -1")
+    assert fThree.appendToBlock("DUMP", 2,"ip3  1 650 2 dump.txt 1 -1")
+    assert fThree.appendToBlock("DUMP",-1,"ip8  1 650 2 dump.txt 1 -1")
+
+def testAddLinesBreak():
+    assert not fThree.appendToBlock("DUMP", 0,"ip1  1 650 2 dump.txt 1 -1")
+    assert not fThree.appendToBlock("DUMP",10,"ip1  1 650 2 dump.txt 1 -1")
+    assert not fThree.appendToBlock("DUMB", 0,"ip1  1 650 2 dump.txt 1 -1")
+    assert not fThree.appendToBlock("DUMB",10,"ip1  1 650 2 dump.txt 1 -1")
+
+def testFileSave():
+    assert fThree.saveFile()
+    assert fcmp.cmp(
+        path.join(currPath,"fort.3.ref"),
+        path.join(currPath,"fort.3"),
+        shallow=False
+    )
+    unlink(path.join(currPath,"fort.3"))

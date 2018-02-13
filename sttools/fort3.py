@@ -26,9 +26,6 @@ class Fort3():
     
     blockOrder = None # Original order of blocks
     blockData  = None # Data of blocks
-    currBlock  = None # Name of block being parsed
-    isGeom     = None # True for GEOM, False for FREE
-    doPrint    = None # Whether the PRINT leyword is present
     isEnded    = None # Whether ENDE keyword has been encountered
     
     def __init__(self, filePath, fileName="fort.3"):
@@ -37,8 +34,6 @@ class Fort3():
         
         self.blockOrder = []
         self.blockData  = {}
-        self.isGeom     = None
-        self.doPrint    = False
         self.isEnded    = False
         
         if path.isdir(filePath):

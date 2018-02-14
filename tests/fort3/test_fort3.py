@@ -31,6 +31,18 @@ def testAddLinesBreak():
     assert not fThree.appendToBlock("DUMB", 0,"ip1  1 650 2 dump.txt 1 -1")
     assert not fThree.appendToBlock("DUMB",10,"ip1  1 650 2 dump.txt 1 -1")
 
+def testAddBlockOk():
+    assert fThree.addBlockFromFile("LIMI",currPath,"fc.3.aper")
+    assert fThree.addBlockLineFromString("LIMI","Something AA 0 0 0 0 0 0 0")
+    assert fThree.addBlockLineFromList("LIMI",["Something","AA",0,0,0,0,0,0,0])
+
+def testAddBlockBreak():
+    assert not fThree.addBlockFromFile("LIMI",currPath,"fc.2.aper")
+    assert not fThree.addBlockLineFromString("LIMI","Something AA 0 0 0 0")
+    assert not fThree.addBlockLineFromString("NOEXIST","")
+    assert not fThree.addBlockLineFromList("LIMI",["Something","AA",0,0,0,0,0])
+    assert not fThree.addBlockLineFromList("NOEXIST",[])
+
 def testFileSave():
     assert fThree.saveFile()
     assert fcmp.cmp(

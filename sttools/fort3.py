@@ -28,6 +28,11 @@ class Fort3():
     blockData  = None # Data of blocks
     isEnded    = None # Whether ENDE keyword has been encountered
     
+    # Block Settings: Long Name, Required Fields (format), Optional Fields (format)
+    blockSettings = {
+        "LIMI" : ["LIMITATIONS","SSFFFFFFF",""],
+    }
+    
     def __init__(self, filePath, fileName="fort.3"):
         
         self.fileExists = False
@@ -106,9 +111,20 @@ class Fort3():
             logger.error("Path not found: %s" & savePath)
             return False
         
+        # Functions for serialisation, where they exist
+        serBlock = {
+            "LIMI" : self.serialiseLIMI,
+        }
+        
         with open(path.join(savePath,saveFile),"w") as outFile:
             for theBlock in self.blockOrder:
-                if "Lines" in self.blockData[theBlock].keys():
+                if theBlock in serBlock.keys():
+                    longName = self.blockData[theBlock]["LongName"]
+                    outFile.write(longName+"-"*(72-len(longName))+"\n")
+                    for theList in self.blockData[theBlock]["Data"]:
+                        outFile.write(serBlock[theBlock](theList)+"\n")
+                    outFile.write("NEXT\n")
+                elif "Lines" in self.blockData[theBlock].keys():
                     for theLine in self.blockData[theBlock]["Lines"]:
                         outFile.write(theLine+"\n")
                 elif theBlock == "ENDE":
@@ -139,5 +155,144 @@ class Fort3():
         self.blockData[whichBlock]["Lines"].insert(whichLine,newData)
         
         return True
+    
+    def newBlock(self, shortName, longName=None):
+        
+        if shortName in self.blockOrder:
+            logger.error("Block %s already exists" & shortName)
+            return False
+        
+        if longName is None:
+            longName = shortName
+        
+        self.blockOrder.insert(len(self.blockOrder)-1,shortName)
+        self.blockData[shortName] = {
+            "LongName" : longName,
+            "Lines"    : [],
+            "Data"     : [],
+        }
+        
+        logger.info("Added block %s" % shortName)
+        
+        return True
+    
+    #
+    # Blocks
+    #
+    
+    def addBlockFromFile(self, blockName, blockPath, blockFile):
+        """
+        Adds a new block, line by line, from a file.
+        If the block does not exist, it's created.
+        """
+        
+        filePath = path.join(blockPath,blockFile)
+        
+        if not path.isfile(filePath):
+            logger.error("File not found %s" % filePath)
+            return False
+        
+        longName = self.blockSettings[blockName][0]
+        blockFmt = self.blockSettings[blockName][1]
+        blockOpt = self.blockSettings[blockName][2]
+        
+        if not blockName in self.blockOrder:
+            self.newBlock(blockName,longName)
+            
+        lineNo = 0
+        with open(filePath,"r") as inFile:
+            for theLine in inFile:
+                lineNo += 1
+                theLine = theLine.strip()
+                if theLine[:4] in [blockName,"NEXT"]: continue
+                if theLine[:1] == "/": continue
+                theList = self.splitBlockLine(theLine,blockFmt,blockOpt)
+                if theList is not None:
+                    self.blockData[blockName]["Data"].append(theList)
+                else:
+                    logger.warning("Invalid entry on line %d" % lineNo)
+        
+        return True
+    
+    def addBlockLineFromString(self, blockName, newLine):
+        """
+        Adds a line to a block from a string.
+        Only valid for blocks known to the Fort3 class.
+        Block must already exist.
+        """
+        
+        if blockName not in self.blockOrder:
+            logger.error("Block %s does not exist" % blockName)
+            return False
+        
+        blockFmt = self.blockSettings[blockName][1]
+        blockOpt = self.blockSettings[blockName][2]
+        
+        theList = self.splitBlockLine(newLine,blockFmt,blockOpt)
+        
+        if theList is None:
+            logger.error("Invalid %s line" % blockName)
+            return False
+        
+        self.blockData[blockName]["Data"].append(theList)
+        
+        return True
+    
+    def addBlockLineFromList(self, blockName, newList):
+        """
+        Adds a line to a block from a list.
+        The list entries must have the correct data types.
+        Only valid for blocks known to the Fort3 class.
+        Block must already exist.
+        """
+        
+        if blockName not in self.blockOrder:
+            logger.error("Block %s does not exist" % blockName)
+            return False
+        
+        blockFmt = self.blockSettings[blockName][1]
+        
+        if not len(newList) >= len(blockFmt):
+            logger.error("Invalid %s list" % blockName)
+            return False
+            
+        self.blockData[blockName]["Data"].append(newList)
+        
+        return True
+    
+    #
+    # Block Serialisation
+    #
+    
+    def serialiseLIMI(self, inData):
+        try:
+            return ("{:<24s} {:<2s}"+" {: 17.9e}"*7).format(*inData)
+        except:
+            logger.error("Invalid LIMI array")
+            return None
+    
+    #
+    # Internal Functions
+    #
+    
+    def splitBlockLine(self, inString, listFormat, listOpts):
+        
+        inList  = inString.split()
+        retList = []
+        
+        if not len(inList) >= len(listFormat):
+            return None
+        
+        for i in range(len(inList)):
+            if listFormat[i] == "S":
+                retList.append(inList[i])
+            elif listFormat[i] == "I":
+                retList.append(int(inList[i]))
+            elif listFormat[i] == "F":
+                retList.append(float(inList[i]))
+            else:
+                logger.error("Invalid datatype '%s' encountered" % listFormat[i])
+        
+        return retList
     
 # END Fort3

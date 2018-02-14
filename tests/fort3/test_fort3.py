@@ -35,6 +35,7 @@ def testAddBlockOk():
     assert fThree.addBlockFromFile("LIMI",currPath,"fc.3.aper")
     assert fThree.addBlockLineFromString("LIMI","Something AA 0 0 0 0 0 0 0")
     assert fThree.addBlockLineFromList("LIMI",["Something","AA",0,0,0,0,0,0,0])
+    assert fThree.addBlockLineFromString("DUMP","ip8  1 650 2 dump.txt 1 -1")
 
 def testAddBlockBreak():
     assert not fThree.addBlockFromFile("LIMI",currPath,"fc.2.aper")

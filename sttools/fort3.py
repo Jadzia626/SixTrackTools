@@ -31,6 +31,7 @@ class Fort3():
     # Block Settings: Long Name, Required Fields (format), Optional Fields (format)
     blockSettings = {
         "LIMI" : ["LIMITATIONS","SSFFFFFFF",""],
+        "DUMP" : ["DUMP",       "SIII",     "SII"],
     }
     
     def __init__(self, filePath, fileName="fort.3"):
@@ -82,13 +83,21 @@ class Fort3():
                 if not inBlock:
                     if toCheck in noNext:
                         self.blockOrder.append(toCheck)
-                        self.blockData[toCheck] = {}
+                        self.blockData[toCheck] = {
+                            "LongName" : theLine.replace("-"," ").strip(),
+                            "Lines"    : [],
+                            "Data"     : [],
+                        }
                         self.blockData[toCheck]["Lines"] = blockBuff
                         inBlock   = False
                         blockBuff = []
                     else:
                         self.blockOrder.append(toCheck)
-                        self.blockData[toCheck] = {}
+                        self.blockData[toCheck] = {
+                            "LongName" : theLine.replace("-"," ").strip(),
+                            "Lines"    : [],
+                            "Data"     : [],
+                        }
                         inBlock   = True
                         currBlock = toCheck
                 else:
@@ -114,6 +123,7 @@ class Fort3():
         # Functions for serialisation, where they exist
         serBlock = {
             "LIMI" : self.serialiseLIMI,
+            "DUMP" : self.serialiseDUMP,
         }
         
         with open(path.join(savePath,saveFile),"w") as outFile:
@@ -124,11 +134,11 @@ class Fort3():
                     for theList in self.blockData[theBlock]["Data"]:
                         outFile.write(serBlock[theBlock](theList)+"\n")
                     outFile.write("NEXT\n")
+                if theBlock == "ENDE":
+                    outFile.write("ENDE\n")
                 elif "Lines" in self.blockData[theBlock].keys():
                     for theLine in self.blockData[theBlock]["Lines"]:
                         outFile.write(theLine+"\n")
-                elif theBlock == "ENDE":
-                    outFile.write("ENDE\n")
                 else:
                     logger.error("Empty block encountered in buffer")
         
@@ -268,27 +278,46 @@ class Fort3():
         try:
             return ("{:<24s} {:<2s}"+" {: 17.9e}"*7).format(*inData)
         except:
-            logger.error("Invalid LIMI array")
+            logger.error("Invalid LIMI list")
+            return None
+    
+    def serialiseDUMP(self, inData):
+        try:
+            nIn = len(inData)
+            serString = ("{:<24s}"+" {:4d}"*3).format(*inData[0:4])
+            if nIn > 4: serString += " {:<24s}".format(inData[4])
+            if nIn > 5: serString += " {:4d}".format(inData[5])
+            if nIn > 5: serString += " {:4d}".format(inData[5])
+            return serString
+        except:
+            logger.error("Invalid DUMP list")
             return None
     
     #
     # Internal Functions
     #
     
-    def splitBlockLine(self, inString, listFormat, listOpts):
+    def splitBlockLine(self, inString, fmtReq, fmtOpt):
         
         inList  = inString.split()
         retList = []
         
-        if not len(inList) >= len(listFormat):
+        nIn  = len(inList)
+        nReq = len(fmtReq)
+        nOpt = len(fmtOpt)
+        
+        fmtAll = fmtReq+fmtOpt
+        
+        if nIn < nReq or nIn > nReq+nOpt:
             return None
         
-        for i in range(len(inList)):
-            if listFormat[i] == "S":
+        for i in range(nReq+nOpt):
+            if i > nIn+1: break
+            if fmtAll[i] == "S":
                 retList.append(inList[i])
-            elif listFormat[i] == "I":
+            elif fmtAll[i] == "I":
                 retList.append(int(inList[i]))
-            elif listFormat[i] == "F":
+            elif fmtAll[i] == "F":
                 retList.append(float(inList[i]))
             else:
                 logger.error("Invalid datatype '%s' encountered" % listFormat[i])

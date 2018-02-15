@@ -13,6 +13,7 @@
 
 import logging
 import numpy   as np
+import shlex
 
 from os import path
 
@@ -32,6 +33,13 @@ class Fort3():
     blockSettings = {
         "LIMI" : ["LIMITATIONS","SSFFFFFFF",""],
         "DUMP" : ["DUMP",       "SIII",     "SII"],
+    }
+    
+    # Blocks that are just keywords (no NEXT)
+    blockKeywords = {
+        "GEOM" : "GEOMETRY",
+        "FREE" : "FREE",
+        "PRIN" : "PRINT",
     }
     
     def __init__(self, filePath, fileName="fort.3"):
@@ -61,53 +69,68 @@ class Fort3():
             logger.error("No valid file specified")
             return False
         
-        fort3File  = path.join(self.filePath,self.fileName)
-        whatLine   = 0
-        inBlock    = False
-        currBlock  = ""
-        blockBuff  = []
-        noNext     = ["GEOM","FREE","PRIN"]
+        fort3File = path.join(self.filePath,self.fileName)
+        lineNo    = 0
+        inBlock   = False
+        currBlock = ""
         
         with open(fort3File,"r") as inFile:
             for theLine in inFile:
-                whatLine += 1
-                theLine   = theLine.strip()
-                toCheck   = theLine[0:4].upper()
+                lineNo  += 1
+                theLine  = theLine.strip()
+                toCheck  = theLine[0:4].upper()
                 
                 # Skipping comment lines
                 if theLine[0] == "/":
                     continue
                 
-                blockBuff.append(theLine)
-                
+                # If not currently in a block, add it.
                 if not inBlock:
-                    if toCheck in noNext:
+                    if toCheck in self.blockKeywords.keys():
                         self.blockOrder.append(toCheck)
                         self.blockData[toCheck] = {
-                            "LongName" : theLine.replace("-"," ").strip(),
-                            "Lines"    : [],
+                            "LongName" : self.blockKeywords[toCheck],
+                            "Type"     : "KEYWORD",
                             "Data"     : [],
+                            "MaxLen"   : [],
                         }
-                        self.blockData[toCheck]["Lines"] = blockBuff
-                        inBlock   = False
-                        blockBuff = []
-                    else:
+                        inBlock = False # No further parsing needed
+                    elif toCheck in self.blockSettings.keys():
                         self.blockOrder.append(toCheck)
                         self.blockData[toCheck] = {
-                            "LongName" : theLine.replace("-"," ").strip(),
-                            "Lines"    : [],
+                            "LongName" : self.blockSettings[toCheck][0],
+                            "Type"     : "PARSED",
                             "Data"     : [],
+                            "MaxLen"   : [],
                         }
                         inBlock   = True
                         currBlock = toCheck
-                else:
-                    if toCheck == "NEXT":
-                        self.blockData[currBlock]["Lines"] = blockBuff
-                        inBlock   = False
-                        blockBuff = []
-                    elif toCheck == "ENDE":
-                        self.isEnded = True
-                        break
+                    else: # Unparsed block type
+                        self.blockOrder.append(toCheck)
+                        self.blockData[toCheck] = {
+                            "LongName" : theLine.replace("-"," ").strip(),
+                            "Type"     : "UNPARSED",
+                            "Data"     : [],
+                            "MaxLen"   : [],
+                        }
+                        inBlock   = True
+                        currBlock = toCheck
+                    
+                    # Skip the rest of this loop step
+                    continue
+                
+                # Check if end of block or end of file
+                if toCheck == "NEXT":
+                    inBlock   = False
+                    continue
+                elif toCheck == "ENDE":
+                    self.isEnded = True
+                    break
+                
+                # If this point is reached, it is a data line.
+                # Add it to the current block.
+                if not self.addBlockLineFromString(currBlock,theLine):
+                    logger.warning("Did not know what to do with line %d" % lineNo)
         
         return True
     
@@ -128,41 +151,39 @@ class Fort3():
         
         with open(path.join(savePath,saveFile),"w") as outFile:
             for theBlock in self.blockOrder:
-                if theBlock in serBlock.keys():
-                    longName = self.blockData[theBlock]["LongName"]
-                    outFile.write(longName+"-"*(72-len(longName))+"\n")
-                    for theList in self.blockData[theBlock]["Data"]:
-                        outFile.write(serBlock[theBlock](theList)+"\n")
-                    outFile.write("NEXT\n")
+                
                 if theBlock == "ENDE":
                     outFile.write("ENDE\n")
-                elif "Lines" in self.blockData[theBlock].keys():
-                    for theLine in self.blockData[theBlock]["Lines"]:
-                        outFile.write(theLine+"\n")
+                    continue
+                
+                longName = self.blockData[theBlock]["LongName"]
+                outFile.write(longName+"-"*(72-len(longName))+"\n")
+                
+                if self.blockData[theBlock]["Data"] == []:
+                    continue
+                
+                if theBlock in serBlock.keys():
+                    # A serialisation function already exists
+                    # for output formatting
+                    for theList in self.blockData[theBlock]["Data"]:
+                        outFile.write(
+                            serBlock[theBlock](theList)+"\n"
+                        )
                 else:
-                    logger.error("Empty block encountered in buffer")
-        
-        return True
-    
-    def appendToBlock(self, whichBlock, whichLine, newData):
-        
-        if not whichBlock in self.blockOrder:
-            logger.error("No block named %s found" % whichBlock)
-            return False
-        
-        if not "Lines" in self.blockData[whichBlock].keys():
-            logger.error("No block data for block %s" % whichBlock)
-            return False
-        
-        nLines = len(self.blockData[whichBlock]["Lines"])
-        if whichLine == -1:
-            whichLine = nLines-1
-        if whichLine <= 0 or whichLine > nLines-1:
-            logger.error("Line number out of bounds")
-            logger.error("Valid range is 1 to %d or -1 for end" % (nLines-1))
-            return False
-        
-        self.blockData[whichBlock]["Lines"].insert(whichLine,newData)
+                    # No serialisation function is defined, so
+                    # align strings by the longest in each column
+                    for theList in self.blockData[theBlock]["Data"]:
+                        fmtString = ""
+                        for i in range(len(theList)):
+                            fmtString += (
+                                "{:<%ds} " % self.blockData[theBlock]["MaxLen"][i]
+                            )
+                        outFile.write(
+                            fmtString.format(*theList).strip()+"\n"
+                        )
+                
+                if theBlock not in self.blockKeywords.keys():
+                    outFile.write("NEXT\n")
         
         return True
     
@@ -180,6 +201,7 @@ class Fort3():
             "LongName" : longName,
             "Lines"    : [],
             "Data"     : [],
+            "MaxLen"   : [],
         }
         
         logger.info("Added block %s" % shortName)
@@ -219,6 +241,7 @@ class Fort3():
                 theList = self.splitBlockLine(theLine,blockFmt,blockOpt)
                 if theList is not None:
                     self.blockData[blockName]["Data"].append(theList)
+                    self.updateMaxLen(blockName,theList)
                 else:
                     logger.warning("Invalid entry on line %d" % lineNo)
         
@@ -235,8 +258,12 @@ class Fort3():
             logger.error("Block %s does not exist" % blockName)
             return False
         
-        blockFmt = self.blockSettings[blockName][1]
-        blockOpt = self.blockSettings[blockName][2]
+        if blockName in self.blockSettings.keys():
+            blockFmt = self.blockSettings[blockName][1]
+            blockOpt = self.blockSettings[blockName][2]
+        else:
+            blockFmt = ""
+            blockOpt = "S"*100
         
         theList = self.splitBlockLine(newLine,blockFmt,blockOpt)
         
@@ -245,6 +272,7 @@ class Fort3():
             return False
         
         self.blockData[blockName]["Data"].append(theList)
+        self.updateMaxLen(blockName,theList)
         
         return True
     
@@ -267,6 +295,7 @@ class Fort3():
             return False
             
         self.blockData[blockName]["Data"].append(newList)
+        self.updateMaxLen(blockName,newList)
         
         return True
     
@@ -276,7 +305,9 @@ class Fort3():
     
     def serialiseLIMI(self, inData):
         try:
-            return ("{:<24s} {:<2s}"+" {: 17.9e}"*7).format(*inData)
+            serString  = "{:<%ds}" % self.blockData["LIMI"]["MaxLen"][0]
+            serString += " {:<2s}"+" {: 17.9e}"*7
+            return serString.format(*inData)
         except:
             logger.error("Invalid LIMI list")
             return None
@@ -284,11 +315,15 @@ class Fort3():
     def serialiseDUMP(self, inData):
         try:
             nIn = len(inData)
-            serString = ("{:<24s}"+" {:4d}"*3).format(*inData[0:4])
-            if nIn > 4: serString += " {:<24s}".format(inData[4])
-            if nIn > 5: serString += " {:4d}".format(inData[5])
-            if nIn > 5: serString += " {:4d}".format(inData[5])
-            return serString
+            serString  = "{:<%ds}" % self.blockData["DUMP"]["MaxLen"][0]
+            serString += " {:3d} {:4d} {:1d}"
+            if nIn > 4:
+                serString += " {:<%ds}" % self.blockData["DUMP"]["MaxLen"][4]
+            if nIn > 5:
+                serString += " {: 5d}"
+            if nIn > 6:
+                serString += " {: 5d}"
+            return serString.format(*inData)
         except:
             logger.error("Invalid DUMP list")
             return None
@@ -298,8 +333,13 @@ class Fort3():
     #
     
     def splitBlockLine(self, inString, fmtReq, fmtOpt):
+        """
+        Splits a string using shlex.split (preserves quotes strings), and
+        the convert the content according to a datatype string consiting
+        of required and optional values.
+        """
         
-        inList  = inString.split()
+        inList  = shlex.split(inString,posix=False)
         retList = []
         
         nIn  = len(inList)
@@ -312,16 +352,34 @@ class Fort3():
             return None
         
         for i in range(nReq+nOpt):
-            if i > nIn+1: break
+            if i > nIn-1: break
             if fmtAll[i] == "S":
                 retList.append(inList[i])
             elif fmtAll[i] == "I":
                 retList.append(int(inList[i]))
             elif fmtAll[i] == "F":
                 retList.append(float(inList[i]))
+            elif fmtAll[i] == "B":
+                retList.append(inList[i].strip().lower() == ".true.")
             else:
-                logger.error("Invalid datatype '%s' encountered" % listFormat[i])
+                logger.error("Invalid datatype '%s' encountered" % fmtAll[i])
         
         return retList
+    
+    def updateMaxLen(self, blockName, inList):
+        
+        for i in range(len(inList)):
+            if isinstance(inList[i],str):
+                nCh = len(inList[i])
+            else:
+                nCh = 0
+            if i < len(self.blockData[blockName]["MaxLen"]):
+                self.blockData[blockName]["MaxLen"][i] = max(
+                    self.blockData[blockName]["MaxLen"][i], nCh
+                )
+            else:
+                self.blockData[blockName]["MaxLen"].append(nCh)
+        
+        return True
     
 # END Fort3

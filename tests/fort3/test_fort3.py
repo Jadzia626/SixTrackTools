@@ -20,22 +20,12 @@ fThree = Fort3(currPath,"fort.3.input")
 def testFileLoad():
     assert fThree.loadFile()
 
-def testAddLinesOK():
-    assert fThree.appendToBlock("DUMP", 1,"ip1  1 650 2 dump.txt 1 -1")
-    assert fThree.appendToBlock("DUMP", 2,"ip3  1 650 2 dump.txt 1 -1")
-    assert fThree.appendToBlock("DUMP",-1,"ip8  1 650 2 dump.txt 1 -1")
-
-def testAddLinesBreak():
-    assert not fThree.appendToBlock("DUMP", 0,"ip1  1 650 2 dump.txt 1 -1")
-    assert not fThree.appendToBlock("DUMP",10,"ip1  1 650 2 dump.txt 1 -1")
-    assert not fThree.appendToBlock("DUMB", 0,"ip1  1 650 2 dump.txt 1 -1")
-    assert not fThree.appendToBlock("DUMB",10,"ip1  1 650 2 dump.txt 1 -1")
-
 def testAddBlockOk():
     assert fThree.addBlockFromFile("LIMI",currPath,"fc.3.aper")
     assert fThree.addBlockLineFromString("LIMI","Something AA 0 0 0 0 0 0 0")
     assert fThree.addBlockLineFromList("LIMI",["Something","AA",0,0,0,0,0,0,0])
     assert fThree.addBlockLineFromString("DUMP","ip8  1 650 2 dump.txt 1 -1")
+    assert fThree.addBlockLineFromString("DUMP","ip8  1 650 2 \"with space.txt\" 1 -1")
 
 def testAddBlockBreak():
     assert not fThree.addBlockFromFile("LIMI",currPath,"fc.2.aper")

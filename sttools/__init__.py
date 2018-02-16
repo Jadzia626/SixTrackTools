@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*
 """Python Toolbox for SixTrack
 
@@ -50,7 +49,3 @@ else:
         level   = logLevel,
         datefmt = "%H:%M:%S",
     )
-
-# Fallback
-if __name__ == '__main__':
-    print("SixTrack Toolbox for Python 3")

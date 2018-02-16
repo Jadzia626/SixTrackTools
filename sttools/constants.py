@@ -12,7 +12,6 @@
 """
 
 import logging
-import sttools
 
 from numpy import pi
 

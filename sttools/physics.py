@@ -10,8 +10,8 @@
   A set of basic calculation functions
 """
 
-from math import sqrt, pi
-from sttools.constants import Const
+from math       import sqrt, pi
+from .constants import Const
 
 def calcLuminosity(bunchParticles, nBunches, revFrequency, beamGamma, normTEmittance, betaStar,
                    crossingAngle, sigmaZ, sigmaStar):

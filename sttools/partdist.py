@@ -13,18 +13,18 @@
 
 import logging
 import timeit
-import sttools
 import numpy as np
 
-from os                import path
-from sttools.constants import Const
-from sttools.physics   import calcGammaBeta
+from os         import path
+from .constants import Const
+from .physics   import calcGammaBeta
 
 logger = logging.getLogger(__name__)
 
-class Dist():
+class PartDist():
     
     partMass = None
+    randSeed = None
     
     def __init__(self, initData):
         
@@ -117,6 +117,23 @@ class Dist():
         
         return
     
+    def setSeed(self, newSeed, seedFile=None):
+        
+        if seedFile is not None:
+            if not path.isdir(path.dirname(seedFile)):
+                logger.error("Path not found: %s" % path.dirname(seedFile))
+                return False
+            with open(seedFile,"a+") as outFile:
+                outFile.write(str(newSeed)+"\n")
+        
+        np.random.seed(newSeed)
+        
+        return True
+    
+    #
+    # Particle Generators
+    #
+    
     def genDist(self, nPairs):
         
         startTime = timeit.default_timer()
@@ -176,17 +193,21 @@ class Dist():
         
         return
     
+    #
+    # Write Files
+    #
+    
     def writeFort13(self, outPath, nPairs):
         
         startTime = timeit.default_timer()
         
         if not path.isdir(outPath):
             logger.error("Path not found: %s" % outPath)
-            return
+            return False
         
         if nPairs*2 > len(self.genXXP):
             logger.error("Cannot output more particle pairs than has been generated")
-            return
+            return False
         
         beamEnergy = self.beamEnergy * 1e-6 # Unit MeV
         outFile = path.join(outPath, "fort.13")
@@ -220,6 +241,37 @@ class Dist():
         
         logger.info("Wrote %d particle pairs to file in %.4f sec" % (nPairs,timePassed))
         
-        return
+        return True
         
+    def writeCollDist(self, outPath, nPairs):
+        
+        startTime = timeit.default_timer()
+        
+        if not path.isdir(outPath):
+            logger.error("Path not found: %s" % outPath)
+            return False
+        
+        if nPairs*2 > len(self.genXXP):
+            logger.error("Cannot output more particle pairs than has been generated")
+            return False
+        
+        beamEnergy = self.beamEnergy * 1e-6 # Unit MeV
+        outFile = path.join(outPath, "partDist.dat")
+        with open(outFile, "w") as outFile:
+            for i in range(2*nPairs):
+                outFile.write((("{: 22.15e} "*6)+"\n").format(
+                    self.genXXP[i,0],
+                    self.genXXP[i,1],
+                    self.genYYP[i,0],
+                    self.genYYP[i,1],
+                    self.genZ[i],
+                    self.genDDP[i]
+                ))
+        
+        timePassed = timeit.default_timer() - startTime
+        
+        logger.info("Wrote %d particle pairs to file in %.4f sec" % (nPairs,timePassed))
+        
+        return True
+    
 # End Class Dist

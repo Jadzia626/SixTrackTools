@@ -1,4 +1,6 @@
-## SixTrack Tools
+# SixTrack Tools
+
+Written by: Veronica Berglyd Olsen, CERN (BE-ABP-HSS), Geneva, Switzerland
 
 A Python module, `sttools`, with tools for SixTrack.
 

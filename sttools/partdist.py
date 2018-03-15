@@ -41,12 +41,12 @@ class PartDist():
         if "energy" in keyVals:
             self.beamEnergy = initData["energy"]
         else:
-            self.beamEnergy = 7.0e12
+            self.beamEnergy = 1.0
         
         if "mass" in keyVals:
             self.partMass = initData["mass"]
         else:
-            self.partMass = Const.ProtonMass
+            self.partMass = 1.0
         
         if "nemit" in keyVals:
             self.normEmit = initData["nemit"]
@@ -73,6 +73,16 @@ class PartDist():
         else:
             self.beamOffset = [0.0, 0.0, 0.0, 0.0]
         
+        if "sigmaxxp" in keyVals:
+            self.sigmaXXP = initData["sigmaxxp"]
+        else:
+            self.sigmaXXP = [1.0, 1.0]
+        
+        if "sigmayyp" in keyVals:
+            self.sigmaYYP = initData["sigmayyp"]
+        else:
+            self.sigmaYYP = [1.0, 1.0]
+        
         if "sigmaz" in keyVals:
             self.sigmaZ = initData["sigmaz"]
         else:
@@ -82,6 +92,11 @@ class PartDist():
             self.spreadE = initData["spreade"]
         else:
             self.spreadE = 0.0
+        
+        if "spreadp" in keyVals:
+            self.spreadP = initData["spreadp"]
+        else:
+            self.spreadP = 0.0
         
         # Check Values
         self.hasError = False
@@ -111,9 +126,12 @@ class PartDist():
         self.beamMom   = bP0
         
         if not "gemit" in keyVals:
-            gEmitX = self.normEmit[0]/(self.beamGamma*self.beamBeta)
-            gEmitY = self.normEmit[1]/(self.beamGamma*self.beamBeta)
-            self.geomEmit = [gEmitX,gEmitY]
+            if self.beamBeta > 0.0:
+                gEmitX = self.normEmit[0]/(self.beamGamma*self.beamBeta)
+                gEmitY = self.normEmit[1]/(self.beamGamma*self.beamBeta)
+                self.geomEmit = [gEmitX,gEmitY]
+            else:
+                self.geomEmit = [1.0,1.0]
         
         return
     
@@ -145,6 +163,23 @@ class PartDist():
         
         return
     
+    def genNormDist(self, nPairs):
+        
+        nPart = nPairs * 2
+        
+        startTime   = timeit.default_timer()
+        self.genXXP = np.random.normal(0.0, 1.0, (nPart,2)) * self.sigmaXXP
+        self.genYYP = np.random.normal(0.0, 1.0, (nPart,2)) * self.sigmaYYP
+        self.genZ   = np.random.normal(0.0, 1.0, nPart)     * self.sigmaZ
+        self.genDDP = np.random.normal(0.0, 1.0, nPart)     * self.spreadP
+        self.genE   = np.zeros(nPart)
+        self.genP   = np.zeros(nPart)
+        timePassed  = timeit.default_timer() - startTime
+        
+        logger.info("Generated %d particle pairs in %.4f sec" % (nPairs,timePassed))
+        
+        return
+    
     def genTransverseDist(self, nPairs):
         """Generate x,xp and y,yp bivariate distributions via covariance matrices
         See: http://se.mathworks.com/help/matlab/ref/randn.html
@@ -170,12 +205,12 @@ class PartDist():
         cholY  = np.linalg.cholesky(covY*gEmitY)
         
         # Generate uncorrelated distributions
-        distX  = np.random.normal(0, 1, (nPart,2))
-        distY  = np.random.normal(0, 1, (nPart,2))
+        distX  = np.random.normal(0.0, 1.0, (nPart,2))
+        distY  = np.random.normal(0.0, 1.0, (nPart,2))
         
         # Apply the Cholesky decomposition
-        self.genXXP = distX*cholX*1e3 # Unit mm, mrad
-        self.genYYP = distY*cholY*1e3 # Unit mm, mrad
+        self.genXXP = distX*cholX
+        self.genYYP = distY*cholY
         
         return
     
@@ -187,9 +222,6 @@ class PartDist():
         self.genE   = self.beamEnergy * (1 + np.random.normal(0, 1, nPart)*self.spreadE)
         self.genP   = np.sqrt((self.genE - self.partMass) * (self.genE + self.partMass))
         self.genDDP = (self.genP - self.beamMom) / self.beamMom
-        
-        self.genZ  *= 1e3  # Unit mm
-        self.genE  *= 1e-6 # Unit MeV
         
         return
     
@@ -217,26 +249,26 @@ class PartDist():
                 p2 = p1+1
                 
                 # Particle 1
-                fort13.write("%22.15e\n" % self.genXXP[p1,0])
-                fort13.write("%22.15e\n" % self.genXXP[p1,1])
-                fort13.write("%22.15e\n" % self.genYYP[p1,0])
-                fort13.write("%22.15e\n" % self.genYYP[p1,1])
-                fort13.write("%22.15e\n" % self.genZ[p1])
+                fort13.write("%22.15e\n" % (self.genXXP[p1,0]*1e3))
+                fort13.write("%22.15e\n" % (self.genXXP[p1,1]*1e3))
+                fort13.write("%22.15e\n" % (self.genYYP[p1,0]*1e3))
+                fort13.write("%22.15e\n" % (self.genYYP[p1,1]*1e3))
+                fort13.write("%22.15e\n" % (self.genZ[p1]*1e3))
                 fort13.write("%22.15e\n" % self.genDDP[p1])
                 
                 # Particle 2
-                fort13.write("%22.15e\n" % self.genXXP[p2,0])
-                fort13.write("%22.15e\n" % self.genXXP[p2,1])
-                fort13.write("%22.15e\n" % self.genYYP[p2,0])
-                fort13.write("%22.15e\n" % self.genYYP[p2,1])
-                fort13.write("%22.15e\n" % self.genZ[p2])
+                fort13.write("%22.15e\n" % (self.genXXP[p2,0]*1e3))
+                fort13.write("%22.15e\n" % (self.genXXP[p2,1]*1e3))
+                fort13.write("%22.15e\n" % (self.genYYP[p2,0]*1e3))
+                fort13.write("%22.15e\n" % (self.genYYP[p2,1]*1e3))
+                fort13.write("%22.15e\n" % (self.genZ[p2]*1e3))
                 fort13.write("%22.15e\n" % self.genDDP[p2])
                 
                 # Energy
                 fort13.write("%22.15e\n" % beamEnergy)
-                fort13.write("%22.15e\n" % self.genE[p1])
-                fort13.write("%22.15e\n" % self.genE[p2])
-                
+                fort13.write("%22.15e\n" % (self.genE[p1]*1e-6))
+                fort13.write("%22.15e\n" % (self.genE[p2]*1e-6))
+        
         timePassed = timeit.default_timer() - startTime
         
         logger.info("Wrote %d particle pairs to file in %.4f sec" % (nPairs,timePassed))

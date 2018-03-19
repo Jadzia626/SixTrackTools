@@ -17,12 +17,13 @@ import h5py
 from os import path
 
 from .tablefs import TableFS
+from .stdump  import STDump
 
 logger = logging.getLogger(__name__)
 
 class Concatenator:
     
-    h5File = None
+    FTYPE_PART_DUMP = 100
     
     def __init__(self, outFile, doOverwrite=False):
         
@@ -30,26 +31,30 @@ class Concatenator:
             logger.error("File already exists and will not be overwritten.")
             return
         
-        self.h5File     = outFile
+        self.h5File = outFile
         
-        self.partOffset = 0
-        
-        if path.isfile(outFile):
-            self.readMeta()
+        if not path.isfile(outFile):
+            with h5py.File(self.h5File, mode="w") as h5Out:
+                h5Out.attrs.create("datasetsRead",0)
+                h5Out.attrs.create("particleOffset",0)
         
         return
     
-    def initFile(self):
+    def appendParticles(self, dataFile, fileType):
         
-        with h5py.File(self.h5File, mode="w") as h5Out:
-            h5Meta = h5Out.create_group("meta")
-            h5Meta.create_dataset("partOffset",0)
+        stData = STDump(dataFile)
+        stData.readAll()
         
-        return True
+        if fileType == self.FTYPE_PART_DUMP:
+            bezVal = stData.metaData["BEZ"]
+            nPart  = stData.metaData["NUMBER_OF_PARTICLES"]
+            nLines = stData.nLines
+            nTurns = int(nLines/nPart)
+            logger.info("Reading particle data from bez = %s" % bezVal)
+            partData = np.array()
+                
+            # with h5py.File(self.h5File, mode="r+") as h5Out:
+                
+        return False
     
-    def readMeta(self):
-        return True
-    
-    
-
 # End Class Concatenator

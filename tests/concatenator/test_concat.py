@@ -15,8 +15,10 @@ from sttools import Concatenator
 
 currPath = path.dirname(path.realpath(__file__))
 
-fCC = Concatenator(path.join(currPath,"test.hdf5"))
+unlink(path.join(currPath,"test.hdf5"))
+fCC = Concatenator(path.join(currPath,"test.hdf5"),True)
 
-def testFileInit():
-    assert fCC.initFile()
+def testLoadDumpFile():
+    assert fCC.appendParticles(path.join(currPath,"dump_ip5.txt"),Concatenator.FTYPE_PART_DUMP)
 
+#unlink(path.join(currPath,"test.hdf5"))

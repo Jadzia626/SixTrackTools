@@ -16,8 +16,11 @@ from hashlib import md5
 from sttools import Concatenator
 
 currPath = path.dirname(path.realpath(__file__))
+hdf5File = path.join(currPath,"test.hdf5")
 
-unlink(path.join(currPath,"test.hdf5"))
+if path.isfile(hdf5File):
+    unlink(hdf5File)
+
 fCC = Concatenator(path.join(currPath,"test.hdf5"),True)
 
 def testOpenFile():

@@ -67,47 +67,58 @@ class Concatenator:
         
         if fileType == self.FTYPE_PART_DUMP:
             
-            logger.info("Reading particle data from bez = %s" % stData.metaData["BEZ"])
+            if stData.nLines == 0:
+                logger.error("The dump file has no data")
+                return False
+            
+            bezName    = stData.metaData["BEZ"]
+            logger.info("Reading particle data from bez = %s" % bezName)
             
             h5Part     = self._getH5Group("/particles")
+            h5BEZ      = self._getH5Group("/particles/%s" % bezName)
             dsRead     = self._readH5Attr("/particles","datasetsRead",0)
             partOffset = self._readH5Attr("/particles","particleOffset",0)
+            
+            bezPos     = stData.allData["S"][0]
+            kTrack     = stData.allData["KTRACK"][0]
+            self._writeH5Attr("/particles/%s" % bezName,"S",bezPos)
+            self._writeH5Attr("/particles/%s" % bezName,"KTRACK",kTrack)
             
             iTurn      = 0
             turnList   = []
             turnNum    = []
             for idx in range(stData.nLines):
+                
                 if not iTurn == stData.allData["TURN"][idx]:
                     iTurn = stData.allData["TURN"][idx]
-                    turnList.append([])
+                    turnList.append({"ID":[],"6D":[]})
                     turnNum.append(iTurn)
                 
-                turnList[len(turnList)-1].append([
-                    stData.allData["ID"][idx] + partOffset,
-                    stData.allData["S"][idx],
-                    stData.allData["X"][idx],
-                    stData.allData["XP"][idx],
-                    stData.allData["Y"][idx],
-                    stData.allData["YP"][idx],
-                    stData.allData["Z"][idx],
-                    stData.allData["DEE"][idx]
+                bezPos = stData.allData["S"][idx]
+                turnList[len(turnList)-1]["ID"].append(
+                    stData.allData["ID"][idx] + partOffset
+                )
+                turnList[len(turnList)-1]["6D"].append([
+                    stData.allData["X"][idx], stData.allData["XP"][idx],
+                    stData.allData["Y"][idx], stData.allData["YP"][idx],
+                    stData.allData["Z"][idx], stData.allData["DEE"][idx]
                 ])
             
             partOffset += int(stData.metaData["NUMBER_OF_PARTICLES"])
             dsRead     += 1
-                
+            
             for turnData, iTurn in zip(turnList,turnNum):
                 if len(turnData) == 0:
                     continue
-                setPath = "/particles/%s/turn%08d" % (
-                    stData.metaData["BEZ"],
-                    iTurn
-                )
-                dataCols = [
-                    ["col0","ID"],["col1","S"], ["col2","X"],["col3","XP"],
-                    ["col4","Y"], ["col5","YP"],["col6","Z"],["col7","DEE"]
+                setPath = "/particles/%s/turn%08d" % (bezName,iTurn)
+                colID = [["col0","ID"]]
+                col6D = [
+                    ["col0","X"],["col1","XP"],
+                    ["col2","Y"],["col3","YP"],
+                    ["col4","Z"],["col5","DEE"]
                 ]
-                h5Set = self._saveH5Data(setPath,turnData,dataCols)
+                h5Set = self._saveH5Data(setPath+"_ID",turnData["ID"],colID,"int32")
+                h5Set = self._saveH5Data(setPath+"_6D",turnData["6D"],col6D,"float64")
             
             self._writeH5Attr("/particles","datasetsRead",  dsRead)
             self._writeH5Attr("/particles","particleOffset",partOffset)
@@ -145,19 +156,30 @@ class Concatenator:
         
         dLen = len(h5Data)
         if dLen > 0:
-            dWidth = len(h5Data[0])
+            dWidth = len(np.atleast_1d(h5Data[0]))
         else:
             dWidth = 1
         
-        if not h5Path in self.h5Object.keys():
-            dSet = self.h5Object.create_dataset(
-                h5Path,data=np.array(h5Data,dtype=dataType),maxshape=(None,dWidth)
-            )
+        if dWidth == 1:
+            if not h5Path in self.h5Object.keys():
+                dSet = self.h5Object.create_dataset(
+                    h5Path,data=np.array(h5Data,dtype=dataType),maxshape=(None,)
+                )
+            else:
+                dSet = self.h5Object[h5Path]
+                pLen = dSet.shape[0]
+                dSet.resize(pLen+dLen,0)
+                dSet[pLen:] = np.array(h5Data,dtype=dataType)
         else:
-            dSet = self.h5Object[h5Path]
-            pLen,pWidth = dSet.shape
-            dSet.resize(pLen+dLen,0)
-            dSet[pLen:,:] = np.array(h5Data,dtype=dataType)
+            if not h5Path in self.h5Object.keys():
+                dSet = self.h5Object.create_dataset(
+                    h5Path,data=np.array(h5Data,dtype=dataType),maxshape=(None,dWidth)
+                )
+            else:
+                dSet = self.h5Object[h5Path]
+                pLen = dSet.shape[0]
+                dSet.resize(pLen+dLen,0)
+                dSet[pLen:,:] = np.array(h5Data,dtype=dataType)
         
         for colName in colNames:
             if not len(colName) == 2:

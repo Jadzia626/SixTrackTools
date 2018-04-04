@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*
-"""Test Script for Fort2 Class
+"""Test Script for Concatenator Class
   
-  SixTrack Tools - Test Script for Fort2 Class
- ==============================================
+  SixTrack Tools - Test Script for Concatenator Class
+ =====================================================
   By: Veronica Berglyd Olsen
       CERN (BE-ABP-HSS)
       Geneva, Switzerland
@@ -30,8 +30,9 @@ def testLoadDumpFile():
 def testCloseFile():
     assert fCC.closeFile()
 
-def testFileChecksum():
-    md5Sum = "2cb5b90811acc27dcfa3de80c3e3800c"
-    assert md5(open(path.join(currPath,"test.hdf5"),mode="rb").read()).hexdigest() == md5Sum
+# Checksum does not work for comparing HDF5 files.
+# def testFileChecksum():
+#     md5Sum = "2cb5b90811acc27dcfa3de80c3e3800c"
+#     assert md5(open(path.join(currPath,"test.hdf5"),mode="rb").read()).hexdigest() == md5Sum
 
 #unlink(path.join(currPath,"test.hdf5"))

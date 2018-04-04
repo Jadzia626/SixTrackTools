@@ -27,23 +27,14 @@ class Concatenator:
     
     def __init__(self, outFile, doTruncate=False):
         
-        # if path.isfile(outFile) and not doOverwrite:
-        #     logger.error("File already exists and will not be overwritten.")
-        #     return
-        
         self.dataFile = outFile
         self.doTrunc  = doTruncate
         self.h5Object = None
         
-        # if not path.isfile(outFile):
-        #     with h5py.File(self.h5File, mode="w") as h5Out:
-        #         h5Out.attrs.create("datasetsRead",0)
-        #         h5Out.attrs.create("particleOffset",0)
-        
         return
     
     #
-    # Open and Close the File
+    #  Open and Close the File
     #
     
     def openFile(self):

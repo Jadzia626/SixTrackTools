@@ -17,6 +17,7 @@ from sttools import HDF5Import
 
 currPath = path.dirname(path.realpath(__file__))
 hdf5File = path.join(currPath,"test.hdf5")
+dumpFile = path.join(currPath,"dump_ip5.txt")
 
 if path.isfile(hdf5File):
     unlink(hdf5File)
@@ -26,9 +27,8 @@ h5Imp = HDF5Import(currPath,path.join(currPath,"test.hdf5"),True)
 def testOpenFile():
     assert h5Imp.openFile()
 
-# def testLoadDumpFile():
-#     assert fCC.appendParticles(path.join(currPath,"dump_ip5.txt"),Concatenator.FTYPE_PART_DUMP)
-#     assert fCC.appendParticles(path.join(currPath,"dump_ip5.txt"),Concatenator.FTYPE_PART_DUMP)
+def testLoadDumpFile():
+    assert h5Imp.importDump(dumpFile)
 
 def testCloseFile():
     assert h5Imp.closeFile()

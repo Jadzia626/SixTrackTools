@@ -79,10 +79,12 @@ class HDF5Import:
             
             h5Part = self._getH5Group("/dump")
             h5BEZ  = self._getH5Group("/dump/%s" % bezName)
-            bezPos = stData.allData["S"][0]
-            kTrack = stData.allData["KTRACK"][0]
+            bezPos = float(stData.allData["S"][0])
+            kTrack = int(stData.allData["KTRACK"][0])
+            nPart  = int(stData.metaData["NUMBER_OF_PARTICLES"])
             self._writeH5Attr("/dump/%s" % bezName,"S",bezPos)
             self._writeH5Attr("/dump/%s" % bezName,"KTRACK",kTrack)
+            self._writeH5Attr("/dump/%s" % bezName,"NPART",nPart)
             
             iTurn    = 0
             turnList = []
@@ -116,8 +118,6 @@ class HDF5Import:
                 ]
                 h5Set = self._saveH5Data(setPath+"_ID",turnData["ID"],colID,"int32")
                 h5Set = self._saveH5Data(setPath+"_6D",turnData["6D"],col6D,"float64")
-            
-            self._writeH5Attr("/dump","nPart",int(stData.metaData["NUMBER_OF_PARTICLES"]))
         
         else:
             logger.error("Unhandled %s" % stData.metaData["FORMAT"])

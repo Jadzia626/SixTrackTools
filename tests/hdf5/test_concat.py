@@ -27,8 +27,8 @@ def testOpenFile():
     assert fCC.openFile()
 
 def testLoadDumpFile():
-    assert fCC.appendParticles(path.join(currPath,"dump_ip5.txt"),Concatenator.FTYPE_PART_DUMP)
-    assert fCC.appendParticles(path.join(currPath,"dump_ip5.txt"),Concatenator.FTYPE_PART_DUMP)
+    assert fCC.appendParticles(path.join(currPath,"dump_ip5.dat"),Concatenator.FTYPE_PART_DUMP)
+    assert fCC.appendParticles(path.join(currPath,"dump_ip5.dat"),Concatenator.FTYPE_PART_DUMP)
 
 def testCloseFile():
     assert fCC.closeFile()

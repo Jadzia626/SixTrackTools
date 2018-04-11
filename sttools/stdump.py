@@ -24,6 +24,8 @@ logger = logging.getLogger(__name__)
 
 class STDump:
     
+    HEADER_CHAR = ("#","%","!")
+    
     def __init__(self, fileName):
         
         if path.isfile(fileName):
@@ -44,89 +46,99 @@ class STDump:
         self.idxNames  = []
         self.hasIndex  = {}
         
-        self.allData  = None
-        self.filData  = None
-        self.nLines   = 0
-        self.isNumPy  = False
+        self.allData   = None
+        self.filData   = None
+        self.nLines    = 0
+        self.isNumPy   = False
         
-        #  Read File
-        # ===========
-        #  Reads the first three lines:
-        #  Line 1: File metadata. Must start with #
-        #  Line 2: Column header. Must start with #
-        #  Line 3: First dataline. Used to detect datatypes.
+        #
+        # Scan the first lines of the file
+        #
+        
+        headerLines = []
+        firstData   = ""
         with open(self.fileName,mode="rt") as tmpFile:
+            for tmpLine in tmpFile:
+                tmpLine = tmpLine.lstrip()
+                if len(tmpLine) == 0: continue
+                if tmpLine[0] in self.HEADER_CHAR:
+                    headerLines.append(tmpLine)
+                else:
+                    firstData = tmpLine
+                    break
+        
+        if not firstData == "":
+            logger.info("Found %d header lines and at least one data line" % len(headerLines))
+        else:
+            logger.error("Could not parse file %s" % path.basename(fileName))
+            return
+        
+        # Treat first header line as metadata
+        if len(headerLines) >= 2:
+            clLine   = headerLines[0][1:].strip()
+            metaBits = clLine.split(",")
+            self.metaData["FORMAT"] = metaBits[0]
+            for b in range(1,len(metaBits)):
+                metaBit   = metaBits[b].strip()
+                metaParts = metaBit.split("=")
+                metaLabel = metaParts[0].strip().upper().replace(" ","_")
+                metaValue = metaParts[1].strip()
+                if isinstance(metaValue,int):
+                    self.metaData[metaLabel] = int(metaValue)
+                elif isinstance(metaValue,float):
+                    self.metaData[metaLabel] = float(metaValue)
+                else:
+                    self.metaData[metaLabel] = metaValue
+        else:
+            logger.warning("Found no recognised metadata in header")
+            self.metaData["FORMAT"] = "Unknown"
             
-            # Line 1: Metadata
-            tmpLine = tmpFile.readline().strip()
-            if tmpLine[0] == "#":
-                clLine   = tmpLine[1:].strip()
-                metaBits = clLine.split(",")
-                self.metaData["FORMAT"] = metaBits[0]
-                for b in range(1,len(metaBits)):
-                    metaBit   = metaBits[b].strip()
-                    metaParts = metaBit.split("=")
-                    metaLabel = metaParts[0].strip().upper().replace(" ","_")
-                    metaValue = metaParts[1].strip()
-                    if isinstance(metaValue,int):
-                        self.metaData[metaLabel] = int(metaValue)
-                    elif isinstance(metaValue,float):
-                        self.metaData[metaLabel] = float(metaValue)
+        # Treat last header line as column header
+        if len(headerLines) >= 1:
+            clLine  = headerLines[-1][1:].strip()
+            colBits = clLine.split()
+            for colBit in colBits:
+                colName = ""
+                for ch in colBit:
+                    if ch in ("(","["): break
+                    if ch == "=":
+                        colName = ""
                     else:
-                        self.metaData[metaLabel] = metaValue
+                        colName += ch
+                colName = colName.strip().upper()
+                colName = re.sub("[^0-9A-Z_]+","",colName)
+                self.colNames.append(colName)
+                self.colTypes.append("str")
+                self.colLabels.append(colBit)
+        else:
+            logger.warning("Found no recognised column header")
+        
+        # Extract data types from first data line
+        colBits = firstData.split()
+        colNum  = 0
+        for colBit in colBits:
+            colBit  = colBit.strip()
+            makeIdx = False
+            try:
+                tmpVal = int(colBit)
+            except ValueError:
+                try:
+                    tmpVal = float(colBit)
+                except ValueError:
+                    self.colTypes[colNum] = "str"
+                else:
+                    self.colTypes[colNum] = "float"
             else:
-                logger.error("First line is not metadata")
-                return
+                self.colTypes[colNum] = "int"
+                makeIdx = True
             
-            # Line 2: Column Header
-            tmpLine = tmpFile.readline().strip()
-            if tmpLine[0] == "#":
-                clLine  = tmpLine[1:].strip()
-                colBits = clLine.split()
-                for colBit in colBits:
-                    colBit   = colBit.strip()
-                    colParts = colBit.split("[")
-                    colName  = colParts[0].strip().upper()
-                    colName  = re.sub("[^0-9A-Z]+","",colName)
-                    self.colNames.append(colName)
-                    self.colTypes.append("str")
-                    self.colLabels.append(colBit)
-            else:
-                logger.error("Second line is not column labels")
-                return
+            self.hasIndex[self.colNames[colNum]] = makeIdx
+            if makeIdx:
+                self.idxData[self.colNames[colNum]] = {}
             
-            # Line 3: First Data Line
-            tmpLine = tmpFile.readline().strip()
-            if tmpLine[0] == "#":
-                logger.error("Third line is not data")
-                return
-            else:
-                colBits = tmpLine.split()
-                colNum  = 0
-                for colBit in colBits:
-                    colBit  = colBit.strip()
-                    makeIdx = False
-                    try:
-                        tmpVal = int(colBit)
-                    except ValueError:
-                        try:
-                            tmpVal = float(colBit)
-                        except ValueError:
-                            self.colTypes[colNum] = "str"
-                        else:
-                            self.colTypes[colNum] = "float"
-                    else:
-                        self.colTypes[colNum] = "int"
-                        makeIdx = True
-                    
-                    self.hasIndex[self.colNames[colNum]] = makeIdx
-                    if makeIdx:
-                        self.idxData[self.colNames[colNum]] = {}
-                    
-                    colNum += 1
+            colNum += 1
         
         return
-    
     
     def addIndex(self, colName):
         """
@@ -140,13 +152,12 @@ class STDump:
         
         return
     
-    
     def readAll(self):
         """
         Reads all lines that do not start with #
         Generates an index for all columns with hasIndex = True
         """
-
+        
         self.allData = {dKey:[] for dKey in self.colNames}
         with open(self.fileName,mode="rt") as tmpFile:
             
@@ -156,7 +167,7 @@ class STDump:
                 
                 tmpLine = tmpLine.strip()
                 lineNo += 1
-                if tmpLine[0] == "#": continue # Skip all comment lines
+                if tmpLine[0] in self.HEADER_CHAR: continue
                 
                 spLines = tmpLine.split()
                 for (spLine,cN) in zip(spLines,self.colNames):
@@ -167,10 +178,10 @@ class STDump:
                         logger.warning("Line %d has an unexpected number of elements" % lineNo)
                     
                     if self.hasIndex[cN]:
-                        dataID = len(self.allData["ID"]) -1
+                        dataID = len(self.allData[self.colNames[0]]) -1
                         self.idxData[cN].setdefault(spLine,[]).append(dataID)
             
-            self.nLines = len(self.allData["ID"])
+            self.nLines = len(self.allData[self.colNames[0]])
             logger.info("%d lines of data read from %s" % (self.nLines,self.fileName))
         
         # Convert columns to numpy arrays
@@ -180,7 +191,6 @@ class STDump:
             self.allData[cN] = np.asarray(self.allData[cN],dtype=cT)
         
         return
-    
     
     def filterPart(self, colName, colValue):
         """
@@ -208,16 +218,13 @@ class STDump:
         
         return True
     
-    
     #
     #  Internal Functions
     #
     
     def stripQuotes(self, sVar):
-        
         if (sVar[0] == sVar[-1]) and sVar.startswith(("'",'"')):
             return sVar[1:-1]
-        
         return sVar
     
 ## End Class TableFS

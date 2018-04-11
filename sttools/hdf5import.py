@@ -157,7 +157,7 @@ class HDF5Import:
                 
                 turnNum  = stData.allData["TURN"][idx]
                 bezName  = stData.allData["BEZ"][idx]
-                scatGen  = stData.allData["SCATTERGENERATOR"][idx]
+                scatGen  = stData.allData["SCATTER_GENERATOR"][idx]
                 scatProb = stData.allData["PROB"][idx]
                 if not bezName in dataDict.keys():
                     dataDict[bezName] = {

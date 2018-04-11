@@ -15,10 +15,11 @@ from hashlib import md5
 
 from sttools import HDF5Import
 
-currPath = path.dirname(path.realpath(__file__))
-hdf5File = path.join(currPath,"test.hdf5")
-dump1File = path.join(currPath,"dump_ip1.dat")
-dump5File = path.join(currPath,"dump_ip5.dat")
+currPath       = path.dirname(path.realpath(__file__))
+hdf5File       = path.join(currPath,"test.hdf5")
+dump1File      = path.join(currPath,"dump_ip1.dat")
+dump5File      = path.join(currPath,"dump_ip5.dat")
+scatterLogFile = path.join(currPath,"scatter_log.dat")
 
 if path.isfile(hdf5File):
     unlink(hdf5File)
@@ -29,8 +30,14 @@ def testOpenFile():
     assert h5Imp.openFile()
 
 def testLoadDumpFile():
-    assert h5Imp.importDump(dump1File)
-    assert h5Imp.importDump(dump5File)
+    assert     h5Imp.importDump(dump1File)
+    assert     h5Imp.importDump(dump5File)
+    assert not h5Imp.importDump("non/existent/file")
+
+def testLoadScatterLogFile():
+    assert     h5Imp.importScatterLog(scatterLogFile)
+    assert not h5Imp.importScatterLog(dump1File)
+    assert not h5Imp.importScatterLog("non/existent/file")
 
 def testCloseFile():
     assert h5Imp.closeFile()

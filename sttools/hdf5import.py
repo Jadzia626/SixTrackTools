@@ -60,10 +60,18 @@ class HDF5Import:
             return False
     
     #
-    #  Append Data
+    #  Import Methods
     #
     
     def importDump(self, dataFile):
+        """
+        Import of standard SixTrack DUMP files.
+        Currently only supports DUMP format #2
+        """
+        
+        if not path.isfile(dataFile):
+            logger.error("File not found %s" % dataFile)
+            return False
         
         stData = STDump(dataFile)
         stData.readAll()
@@ -106,21 +114,104 @@ class HDF5Import:
                     stData.allData["Z"][idx], stData.allData["DEE"][idx]
                 ])
             
+            colID = [["col0","ID"]]
+            col6D = [
+                ["col0","X"],["col1","XP"],
+                ["col2","Y"],["col3","YP"],
+                ["col4","Z"],["col5","DEE"]
+            ]
             for turnData, iTurn in zip(turnList,turnNum):
-                if len(turnData) == 0:
-                    continue
+                if len(turnData) == 0: continue
                 setPath = "/dump/%s/turn%08d" % (bezName,iTurn)
-                colID = [["col0","ID"]]
-                col6D = [
-                    ["col0","X"],["col1","XP"],
-                    ["col2","Y"],["col3","YP"],
-                    ["col4","Z"],["col5","DEE"]
-                ]
-                h5Set = self._saveH5Data(setPath+"_ID",turnData["ID"],colID,"int32")
-                h5Set = self._saveH5Data(setPath+"_6D",turnData["6D"],col6D,"float64")
+                h5Set   = self._saveH5Data(setPath+"_ID",turnData["ID"],colID,"int32")
+                h5Set   = self._saveH5Data(setPath+"_6D",turnData["6D"],col6D,"float64")
         
         else:
-            logger.error("Unhandled %s" % stData.metaData["FORMAT"])
+            logger.error("Unhandled format: %s" % stData.metaData["FORMAT"])
+            return False
+        
+        return True
+    
+    def importScatterLog(self, dataFile):
+        """
+        Import of SixTrack Scatter Log file
+        """
+        
+        if not path.isfile(dataFile):
+            logger.error("File not found %s" % dataFile)
+            return False
+        
+        stData = STDump(dataFile)
+        stData.readAll()
+        
+        if stData.metaData["FORMAT"] == "scatter_log":
+            
+            if stData.nLines == 0:
+                logger.error("The dump file has no data")
+                return False
+            
+            h5Scatt = self._getH5Group("/scatter")
+            
+            dataDict = {}
+            for idx in range(stData.nLines):
+                
+                turnNum  = stData.allData["TURN"][idx]
+                bezName  = stData.allData["BEZ"][idx]
+                scatGen  = stData.allData["SCATTERGENERATOR"][idx]
+                scatProb = stData.allData["PROB"][idx]
+                if not bezName in dataDict.keys():
+                    dataDict[bezName] = {
+                        "scatGen"  : scatGen,
+                        "scatProb" : float(scatProb),
+                        "turnList" : {}
+                    }
+                if not turnNum in dataDict[bezName]["turnList"].keys():
+                    dataDict[bezName]["turnList"][turnNum] = {"ID":[],"VAL":[]}
+                    
+                dataDict[bezName]["turnList"][turnNum]["ID"].append(
+                    stData.allData["ID"][idx]
+                )
+                dataDict[bezName]["turnList"][turnNum]["VAL"].append([
+                    stData.allData["T"][idx],
+                    stData.allData["XI"][idx],
+                    stData.allData["THETA"][idx],
+                    stData.allData["PHI"][idx]
+                ])
+                
+            for bezName in dataDict.keys():
+                
+                h5BEZ = self._getH5Group("/scatter/%s" % bezName)
+                
+                self._writeH5Attr(
+                    "/scatter/%s" % bezName,
+                    "GENERATOR",
+                    dataDict[bezName]["scatGen"],
+                    "S%d" % len(dataDict[bezName]["scatGen"])
+                )
+                self._writeH5Attr(
+                    "/scatter/%s" % bezName,
+                    "PROBABILITY",
+                    dataDict[bezName]["scatProb"],
+                    "float64"
+                )
+
+                for turnNum in dataDict[bezName]["turnList"].keys():
+                    setPath = "/scatter/%s/turn%08d" % (bezName, int(turnNum))
+                    h5Set = self._saveH5Data(
+                        setPath+"_ID",
+                        dataDict[bezName]["turnList"][turnNum]["ID"],
+                        [["col0","ID"]],
+                        "int32"
+                    )
+                    h5Set = self._saveH5Data(
+                        setPath+"_VAL",
+                        dataDict[bezName]["turnList"][turnNum]["VAL"],
+                        [["col0","T"],["col1","XI"],["col2","THETA"],["col3","PHI"]],
+                        "float64"
+                    )
+        
+        else:
+            logger.error("Unhandled format: %s" % stData.metaData["FORMAT"])
             return False
         
         return True
@@ -134,11 +225,11 @@ class HDF5Import:
             return self.h5File[h5Path].attrs[attrName]
         return defaultVal
     
-    def _writeH5Attr(self, h5Path, attrName, attrValue):
+    def _writeH5Attr(self, h5Path, attrName, attrValue, dataType="float64"):
         if attrName in self.h5File[h5Path].attrs.keys():
             self.h5File[h5Path].attrs[attrName] = attrValue
         else:
-            self.h5File[h5Path].attrs.create(attrName, attrValue)
+            self.h5File[h5Path].attrs.create(attrName, attrValue, dtype=dataType)
         return True
     
     def _getH5Group(self, h5Path):

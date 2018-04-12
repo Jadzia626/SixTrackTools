@@ -116,9 +116,15 @@ class HDF5Import:
             )
             h5Grp = self._createH5Group(self.h5File,"dump")
             h5Set = h5Grp.create_dataset(bezName,data=h5Data)
-            h5Set.attrs.create("S",bezPos,dtype=self.DT_FLT)
-            h5Set.attrs.create("KTRACK",kTrack,dtype=self.DT_INT)
-            h5Set.attrs.create("NPART",nPart,dtype=self.DT_INT)
+            h5Set.attrs.create("S",        bezPos, dtype=self.DT_FLT)
+            h5Set.attrs.create("KTRACK",   kTrack, dtype=self.DT_INT)
+            h5Set.attrs.create("NPART",    nPart,  dtype=self.DT_INT)
+            h5Set.attrs.create("UNITS_S",  "m",    dtype=self.DT_STR)
+            h5Set.attrs.create("UNITS_X",  "mm",   dtype=self.DT_STR)
+            h5Set.attrs.create("UNITS_XP", "mrad", dtype=self.DT_STR)
+            h5Set.attrs.create("UNITS_Y",  "mm",   dtype=self.DT_STR)
+            h5Set.attrs.create("UNITS_YP", "mrad", dtype=self.DT_STR)
+            h5Set.attrs.create("UNITS_Z",  "mm",   dtype=self.DT_STR)
         
         else:
             logger.error("Unhandled format: %s" % stData.metaData["FORMAT"])
@@ -194,8 +200,12 @@ class HDF5Import:
                     ]
                 )
                 h5Set = h5Grp.create_dataset("%s_log" % bezName,data=h5Data)
-                h5Set.attrs.create("GENERATOR",dataDict[bezName]["scatGen"],dtype=self.DT_STR)
-                h5Set.attrs.create("PROBABILITY",dataDict[bezName]["scatProb"],dtype=self.DT_FLT)
+                h5Set.attrs.create("GENERATOR",   dataDict[bezName]["scatGen"], dtype=self.DT_STR)
+                h5Set.attrs.create("PROBABILITY", dataDict[bezName]["scatProb"],dtype=self.DT_FLT)
+                h5Set.attrs.create("UNIT_T",      "MeV^2", dtype=self.DT_STR)
+                h5Set.attrs.create("UNIT_XI",     "",      dtype=self.DT_STR)
+                h5Set.attrs.create("UNIT_THETA",  "mrad",  dtype=self.DT_STR)
+                h5Set.attrs.create("UNIT_PHI",    "rad",   dtype=self.DT_STR)
         
         else:
             logger.error("Unhandled format: %s" % stData.metaData["FORMAT"])

@@ -95,26 +95,22 @@ class STDump:
             
         # Treat last header line as column header
         if len(headerLines) >= 1:
-            clLine  = headerLines[-1][1:].strip()
+            clLine = headerLines[-1][1:].strip()
+            clLine = re.sub("\(.*?\)","",clLine)
+            clLine = re.sub("\[.*?\]","",clLine)
             if "," in clLine:
                 colBits = clLine.split(",")
             else:
                 colBits = clLine.split()
-            print(colBits)
             
             for colBit in colBits:
-                colName = ""
-                for ch in colBit:
-                    if ch in ("(","["): break
-                    if ch == "=":
-                        colName = ""
-                    else:
-                        colName += ch
+                colName = re.sub("^.*?=","",colBit)
                 colName = colName.strip().upper()
                 colName = re.sub("[^0-9A-Z_]+","",colName)
                 self.colNames.append(colName)
                 self.colTypes.append("str")
                 self.colLabels.append(colBit)
+            
         else:
             logger.warning("Found no recognised column header")
         

@@ -230,7 +230,7 @@ class HDF5Import:
         
         validCols = ["ICOLL","COLLNAME","NIMP","NABS","IMP_AV","IMP_SIG","LENGTH"]
         
-        if bool(set(stData.colNames).intersection(validCols)):
+        if len(set(stData.colNames).intersection(validCols)) == len(validCols):
             
             if stData.nLines == 0:
                 logger.error("The data file has no data")
@@ -248,17 +248,91 @@ class HDF5Import:
                     stData.allData["LENGTH"]
                 ],
                 dtype=[
-                    ("ICOLL"    , self.DT_INT),
-                    ("COLLNAME" , self.DT_STR),
-                    ("NIMP"     , self.DT_INT),
-                    ("NABS"     , self.DT_INT),
-                    ("IMP_AV"   , self.DT_FLT),
-                    ("IMP_SIG"  , self.DT_FLT),
-                    ("LENGTH"   , self.DT_FLT)
+                    ("ICOLL",    self.DT_INT),
+                    ("COLLNAME", self.DT_STR),
+                    ("NIMP",     self.DT_INT),
+                    ("NABS",     self.DT_INT),
+                    ("IMP_AV",   self.DT_FLT),
+                    ("IMP_SIG",  self.DT_FLT),
+                    ("LENGTH",   self.DT_FLT)
                 ]
             )
-            h5Grp = self.h5File.create_group("collimation")
+            h5Grp = self._createH5Group(self.h5File,"collimation")
             h5Set = h5Grp.create_dataset("summary",data=h5Data)
+            
+        else:
+            logger.error("Unexpected header variables in %s" % path.basename(dataFile))
+            return False
+        
+        return True
+    
+    #
+    #  Import SixTrack COLLIMATION First Impacts File
+    #
+    def importCollFirstImpacts(self, dataFile):
+        """
+        Import SixTrack COLLIMATION First Impacts File
+        """
+        
+        if not path.isfile(dataFile):
+            logger.error("File not found %s" % dataFile)
+            return False
+        
+        stData = STDump(dataFile)
+        stData.readAll()
+        
+        validCols = [
+            "NAME", "ITURN",  "ICOLL","NABS","S_IMP","S_OUT",
+            "X_IN", "XP_IN", "Y_IN", "YP_IN",
+            "X_OUT","XP_OUT","Y_OUT","YP_OUT"
+        ]
+        if len(set(stData.colNames).intersection(validCols)) == len(validCols):
+            
+            if stData.nLines == 0:
+                logger.error("The data file has no data")
+                return False
+            
+            # Save Data
+            h5Data = np.core.records.fromarrays(
+                [
+                    stData.allData["NAME"],
+                    stData.allData["ITURN"],
+                    stData.allData["ICOLL"],
+                    stData.allData["NABS"],
+                    stData.allData["S_IMP"],
+                    stData.allData["S_OUT"],
+                    stData.allData["X_IN"],
+                    stData.allData["XP_IN"],
+                    stData.allData["Y_IN"],
+                    stData.allData["YP_IN"],
+                    stData.allData["X_OUT"],
+                    stData.allData["XP_OUT"],
+                    stData.allData["Y_OUT"],
+                    stData.allData["YP_OUT"]
+                ],
+                dtype=[
+                    ("NAME",   self.DT_INT),
+                    ("ITURN",   self.DT_INT),
+                    ("ICOLL",  self.DT_INT),
+                    ("NABS",   self.DT_INT),
+                    ("S_IMP",  self.DT_FLT),
+                    ("S_OUT",  self.DT_FLT),
+                    ("X_IN",   self.DT_FLT),
+                    ("XP_IN",  self.DT_FLT),
+                    ("Y_IN",   self.DT_FLT),
+                    ("YP_IN",  self.DT_FLT),
+                    ("X_OUT",  self.DT_FLT),
+                    ("XP_OUT", self.DT_FLT),
+                    ("Y_OUT",  self.DT_FLT),
+                    ("YP_OUT", self.DT_FLT)
+                ]
+            )
+            h5Grp = self._createH5Group(self.h5File,"collimation")
+            h5Set = h5Grp.create_dataset("first_impact",data=h5Data)
+            h5Set.attrs.create("UNIT_S_IMP", "m", dtype=self.DT_STR)
+            h5Set.attrs.create("UNIT_S_OUT", "m", dtype=self.DT_STR)
+            h5Set.attrs.create("UNIT_X_IN",  "m", dtype=self.DT_STR)
+            h5Set.attrs.create("UNIT_X_OUT", "m", dtype=self.DT_STR)
             
         else:
             logger.error("Unexpected header variables in %s" % path.basename(dataFile))

@@ -96,7 +96,12 @@ class STDump:
         # Treat last header line as column header
         if len(headerLines) >= 1:
             clLine  = headerLines[-1][1:].strip()
-            colBits = clLine.split()
+            if "," in clLine:
+                colBits = clLine.split(",")
+            else:
+                colBits = clLine.split()
+            print(colBits)
+            
             for colBit in colBits:
                 colName = ""
                 for ch in colBit:

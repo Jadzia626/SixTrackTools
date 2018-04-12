@@ -85,49 +85,40 @@ class HDF5Import:
                 logger.error("The dump file has no data")
                 return False
             
+            # Prepare Data
             bezName = stData.metaData["BEZ"]
-            logger.info("Reading particle data from bez = %s" % bezName)
+            bezPos  = float(stData.allData["S"][0])
+            kTrack  = int(stData.allData["KTRACK"][0])
+            nPart   = int(stData.metaData["NUMBER_OF_PARTICLES"])
             
-            h5Part = self._getH5Group("/dump")
-            h5BEZ  = self._getH5Group("/dump/%s" % bezName)
-            bezPos = float(stData.allData["S"][0])
-            kTrack = int(stData.allData["KTRACK"][0])
-            nPart  = int(stData.metaData["NUMBER_OF_PARTICLES"])
-            self._writeH5Attr("/dump/%s" % bezName,"S",bezPos)
-            self._writeH5Attr("/dump/%s" % bezName,"KTRACK",kTrack)
-            self._writeH5Attr("/dump/%s" % bezName,"NPART",nPart)
-            
-            iTurn    = 0
-            turnList = []
-            turnNum  = []
-            for idx in range(stData.nLines):
-                
-                if not iTurn == stData.allData["TURN"][idx]:
-                    iTurn = stData.allData["TURN"][idx]
-                    turnList.append({"ID":[],"6D":[]})
-                    turnNum.append(iTurn)
-                
-                bezPos = stData.allData["S"][idx]
-                turnList[len(turnList)-1]["ID"].append(
-                    stData.allData["ID"][idx]
-                )
-                turnList[len(turnList)-1]["6D"].append([
-                    stData.allData["X"][idx], stData.allData["XP"][idx],
-                    stData.allData["Y"][idx], stData.allData["YP"][idx],
-                    stData.allData["Z"][idx], stData.allData["DEE"][idx]
-                ])
-            
-            colID = [["col0","ID"]]
-            col6D = [
-                ["col0","X"],["col1","XP"],
-                ["col2","Y"],["col3","YP"],
-                ["col4","Z"],["col5","DEE"]
-            ]
-            for turnData, iTurn in zip(turnList,turnNum):
-                if len(turnData) == 0: continue
-                setPath = "/dump/%s/turn%08d" % (bezName,iTurn)
-                h5Set   = self._saveH5Data(setPath+"_ID",turnData["ID"],colID,self.DT_INT)
-                h5Set   = self._saveH5Data(setPath+"_6D",turnData["6D"],col6D,self.DT_FLT)
+            # Save Data
+            h5Data = np.core.records.fromarrays(
+                [
+                    stData.allData["ID"],
+                    stData.allData["TURN"],
+                    stData.allData["X"],
+                    stData.allData["XP"],
+                    stData.allData["Y"],
+                    stData.allData["YP"],
+                    stData.allData["Z"],
+                    stData.allData["DEE"]
+                ],
+                dtype=[
+                    ("ID",   self.DT_INT),
+                    ("TURN", self.DT_INT),
+                    ("X",    self.DT_FLT),
+                    ("XP",   self.DT_FLT),
+                    ("Y",    self.DT_FLT),
+                    ("YP",   self.DT_FLT),
+                    ("Z",    self.DT_FLT),
+                    ("DEE",  self.DT_FLT)
+                ]
+            )
+            h5Grp = self._createH5Group(self.h5File,"dump")
+            h5Set = h5Grp.create_dataset(bezName,data=h5Data)
+            h5Set.attrs.create("S",bezPos,dtype=self.DT_FLT)
+            h5Set.attrs.create("KTRACK",kTrack,dtype=self.DT_INT)
+            h5Set.attrs.create("NPART",nPart,dtype=self.DT_INT)
         
         else:
             logger.error("Unhandled format: %s" % stData.metaData["FORMAT"])
@@ -156,12 +147,10 @@ class HDF5Import:
                 logger.error("The dump file has no data")
                 return False
             
-            h5Scatt = self._getH5Group("/scatter")
-            
+            # Prepare Data
             dataDict = {}
             for idx in range(stData.nLines):
                 
-                turnNum  = stData.allData["TURN"][idx]
                 bezName  = stData.allData["BEZ"][idx]
                 scatGen  = stData.allData["SCATTER_GENERATOR"][idx]
                 scatProb = stData.allData["PROB"][idx]
@@ -169,52 +158,44 @@ class HDF5Import:
                     dataDict[bezName] = {
                         "scatGen"  : scatGen,
                         "scatProb" : float(scatProb),
-                        "turnList" : {}
+                        "scatData" : {
+                            "ID"    : [],
+                            "TURN"  : [],
+                            "T"     : [],
+                            "XI"    : [],
+                            "THETA" : [],
+                            "PHI"   : []
+                        }
                     }
-                if not turnNum in dataDict[bezName]["turnList"].keys():
-                    dataDict[bezName]["turnList"][turnNum] = {"ID":[],"VAL":[]}
-                    
-                dataDict[bezName]["turnList"][turnNum]["ID"].append(
-                    stData.allData["ID"][idx]
-                )
-                dataDict[bezName]["turnList"][turnNum]["VAL"].append([
-                    stData.allData["T"][idx],
-                    stData.allData["XI"][idx],
-                    stData.allData["THETA"][idx],
-                    stData.allData["PHI"][idx]
-                ])
-                
+                for dtKey in dataDict[bezName]["scatData"].keys():
+                    dataDict[bezName]["scatData"][dtKey].append(
+                        stData.allData[dtKey][idx]
+                    )
+            
+            # Save Data
+            h5Grp = self.h5File.create_group("scatter")
             for bezName in dataDict.keys():
-                
-                h5BEZ = self._getH5Group("/scatter/%s" % bezName)
-                
-                self._writeH5Attr(
-                    "/scatter/%s" % bezName,
-                    "GENERATOR",
-                    dataDict[bezName]["scatGen"],
-                    "S%d" % len(dataDict[bezName]["scatGen"])
+                h5Data = np.core.records.fromarrays(
+                    [
+                        dataDict[bezName]["scatData"]["ID"],
+                        dataDict[bezName]["scatData"]["TURN"],
+                        dataDict[bezName]["scatData"]["T"],
+                        dataDict[bezName]["scatData"]["XI"],
+                        dataDict[bezName]["scatData"]["THETA"],
+                        dataDict[bezName]["scatData"]["PHI"]
+                    ],
+                    dtype=[
+                        ("ID",    self.DT_INT),
+                        ("TURN",  self.DT_INT),
+                        ("T",     self.DT_FLT),
+                        ("XI",    self.DT_FLT),
+                        ("THETA", self.DT_FLT),
+                        ("PHI",   self.DT_FLT)
+                    ]
                 )
-                self._writeH5Attr(
-                    "/scatter/%s" % bezName,
-                    "PROBABILITY",
-                    dataDict[bezName]["scatProb"],
-                    "float64"
-                )
-
-                for turnNum in dataDict[bezName]["turnList"].keys():
-                    setPath = "/scatter/%s/turn%08d" % (bezName, int(turnNum))
-                    h5Set = self._saveH5Data(
-                        setPath+"_ID",
-                        dataDict[bezName]["turnList"][turnNum]["ID"],
-                        [["col0","ID"]],
-                        self.DT_INT
-                    )
-                    h5Set = self._saveH5Data(
-                        setPath+"_VAL",
-                        dataDict[bezName]["turnList"][turnNum]["VAL"],
-                        [["col0","T"],["col1","XI"],["col2","THETA"],["col3","PHI"]],
-                        self.DT_FLT
-                    )
+                h5Set = h5Grp.create_dataset("%s_log" % bezName,data=h5Data)
+                h5Set.attrs.create("GENERATOR",dataDict[bezName]["scatGen"],dtype=self.DT_STR)
+                h5Set.attrs.create("PROBABILITY",dataDict[bezName]["scatProb"],dtype=self.DT_FLT)
         
         else:
             logger.error("Unhandled format: %s" % stData.metaData["FORMAT"])
@@ -245,54 +226,29 @@ class HDF5Import:
                 logger.error("The data file has no data")
                 return False
             
-            h5Coll   = self._getH5Group("/collimation")
-            
-            collID   = []
-            collName = []
-            collLoss = []
-            collData = []
-            for idx in range(stData.nLines):
-                
-                collID.append(
-                    stData.allData["ICOLL"][idx]
-                )
-                collName.append(
-                    stData.allData["COLLNAME"][idx]
-                )
-                collLoss.append([
-                    stData.allData["NIMP"][idx],
-                    stData.allData["NABS"][idx]
-                ])
-                collData.append([
-                    stData.allData["IMP_AV"][idx],
-                    stData.allData["IMP_SIG"][idx],
-                    stData.allData["LENGTH"][idx]
-                ])
-            
-            h5Set = self._saveH5Data(
-                "/collimation/collimator_ID",
-                collID,
-                [["col0","ICOLL"]],
-                self.DT_INT
+            # Save Data
+            h5Data = np.core.records.fromarrays(
+                [
+                    stData.allData["ICOLL"],
+                    stData.allData["COLLNAME"],
+                    stData.allData["NIMP"],
+                    stData.allData["NABS"],
+                    stData.allData["IMP_AV"],
+                    stData.allData["IMP_SIG"],
+                    stData.allData["LENGTH"]
+                ],
+                dtype=[
+                    ("ICOLL"    , self.DT_INT),
+                    ("COLLNAME" , self.DT_STR),
+                    ("NIMP"     , self.DT_INT),
+                    ("NABS"     , self.DT_INT),
+                    ("IMP_AV"   , self.DT_FLT),
+                    ("IMP_SIG"  , self.DT_FLT),
+                    ("LENGTH"   , self.DT_FLT)
+                ]
             )
-            h5Set = self._saveH5Data(
-                "/collimation/collimator_NAME",
-                collName,
-                [["col0","COLLNAME"]],
-                self.DT_STR
-            )
-            h5Set = self._saveH5Data(
-                "/collimation/summary_LOSS",
-                collLoss,
-                [["col0","NIMP"],["col1","NABS"]],
-                self.DT_INT
-            )
-            h5Set = self._saveH5Data(
-                "/collimation/summary_DATA",
-                collData,
-                [["col0","IMP_AV"],["col1","IMP_SIG"],["col2","LENGTH"]],
-                self.DT_FLT
-            )
+            h5Grp = self.h5File.create_group("collimation")
+            h5Set = h5Grp.create_dataset("summary",data=h5Data)
             
         else:
             logger.error("Unexpected header variables in %s" % path.basename(dataFile))
@@ -304,6 +260,11 @@ class HDF5Import:
     #  Internal Functions
     #
     
+    def _createH5Group(self, h5Obj, groupName):
+        if not groupName in h5Obj.keys():
+            h5Obj.create_group(groupName)
+        return h5Obj[groupName]
+        
     def _readH5Attr(self, h5Path, attrName, defaultVal):
         if attrName in self.h5File[h5Path].attrs.keys():
             return self.h5File[h5Path].attrs[attrName]

@@ -23,6 +23,10 @@ logger = logging.getLogger(__name__)
 
 class HDF5Import:
     
+    DT_INT = "int32"
+    DT_FLT = "float64"
+    DT_STR = h5py.special_dtype(vlen=str)
+    
     def __init__(self, inFolder, outFile, doTruncate=False):
         
         if not path.isdir(inFolder):
@@ -60,12 +64,11 @@ class HDF5Import:
             return False
     
     #
-    #  Import Methods
+    #  Import SixTrack DUMP File
     #
-    
     def importDump(self, dataFile):
         """
-        Import of standard SixTrack DUMP files.
+        Import SixTrack DUMP File
         Currently only supports DUMP format #2
         """
         
@@ -123,8 +126,8 @@ class HDF5Import:
             for turnData, iTurn in zip(turnList,turnNum):
                 if len(turnData) == 0: continue
                 setPath = "/dump/%s/turn%08d" % (bezName,iTurn)
-                h5Set   = self._saveH5Data(setPath+"_ID",turnData["ID"],colID,"int32")
-                h5Set   = self._saveH5Data(setPath+"_6D",turnData["6D"],col6D,"float64")
+                h5Set   = self._saveH5Data(setPath+"_ID",turnData["ID"],colID,self.DT_INT)
+                h5Set   = self._saveH5Data(setPath+"_6D",turnData["6D"],col6D,self.DT_FLT)
         
         else:
             logger.error("Unhandled format: %s" % stData.metaData["FORMAT"])
@@ -132,9 +135,12 @@ class HDF5Import:
         
         return True
     
+    #
+    #  Import SixTrack SCATTER Log File
+    #
     def importScatterLog(self, dataFile):
         """
-        Import of SixTrack Scatter Log file
+        Import SixTrack SCATTER Log File
         """
         
         if not path.isfile(dataFile):
@@ -201,17 +207,95 @@ class HDF5Import:
                         setPath+"_ID",
                         dataDict[bezName]["turnList"][turnNum]["ID"],
                         [["col0","ID"]],
-                        "int32"
+                        self.DT_INT
                     )
                     h5Set = self._saveH5Data(
                         setPath+"_VAL",
                         dataDict[bezName]["turnList"][turnNum]["VAL"],
                         [["col0","T"],["col1","XI"],["col2","THETA"],["col3","PHI"]],
-                        "float64"
+                        self.DT_FLT
                     )
         
         else:
             logger.error("Unhandled format: %s" % stData.metaData["FORMAT"])
+            return False
+        
+        return True
+    
+    #
+    #  Import SixTrack COLLIMATION Summary File
+    #
+    def importCollSummary(self, dataFile):
+        """
+        Import SixTrack COLLIMATION Summary File
+        """
+        
+        if not path.isfile(dataFile):
+            logger.error("File not found %s" % dataFile)
+            return False
+        
+        stData = STDump(dataFile)
+        stData.readAll()
+        
+        validCols = ["ICOLL","COLLNAME","NIMP","NABS","IMP_AV","IMP_SIG","LENGTH"]
+        
+        if bool(set(stData.colNames).intersection(validCols)):
+            
+            if stData.nLines == 0:
+                logger.error("The data file has no data")
+                return False
+            
+            h5Coll   = self._getH5Group("/collimation")
+            
+            collID   = []
+            collName = []
+            collLoss = []
+            collData = []
+            for idx in range(stData.nLines):
+                
+                collID.append(
+                    stData.allData["ICOLL"][idx]
+                )
+                collName.append(
+                    stData.allData["COLLNAME"][idx]
+                )
+                collLoss.append([
+                    stData.allData["NIMP"][idx],
+                    stData.allData["NABS"][idx]
+                ])
+                collData.append([
+                    stData.allData["IMP_AV"][idx],
+                    stData.allData["IMP_SIG"][idx],
+                    stData.allData["LENGTH"][idx]
+                ])
+            
+            h5Set = self._saveH5Data(
+                "/collimation/collimator_ID",
+                collID,
+                [["col0","ICOLL"]],
+                self.DT_INT
+            )
+            h5Set = self._saveH5Data(
+                "/collimation/collimator_NAME",
+                collName,
+                [["col0","COLLNAME"]],
+                self.DT_STR
+            )
+            h5Set = self._saveH5Data(
+                "/collimation/summary_LOSS",
+                collLoss,
+                [["col0","NIMP"],["col1","NABS"]],
+                self.DT_INT
+            )
+            h5Set = self._saveH5Data(
+                "/collimation/summary_DATA",
+                collData,
+                [["col0","IMP_AV"],["col1","IMP_SIG"],["col2","LENGTH"]],
+                self.DT_FLT
+            )
+            
+        else:
+            logger.error("Unexpected header variables in %s" % path.basename(dataFile))
             return False
         
         return True
@@ -225,7 +309,9 @@ class HDF5Import:
             return self.h5File[h5Path].attrs[attrName]
         return defaultVal
     
-    def _writeH5Attr(self, h5Path, attrName, attrValue, dataType="float64"):
+    def _writeH5Attr(self, h5Path, attrName, attrValue, dataType=None):
+        if dataType is None:
+            dataType = self.DT_FLT
         if attrName in self.h5File[h5Path].attrs.keys():
             self.h5File[h5Path].attrs[attrName] = attrValue
         else:
@@ -237,8 +323,11 @@ class HDF5Import:
             self.h5File.create_group(h5Path)
         return self.h5File[h5Path]
     
-    def _saveH5Data(self, h5Path, h5Data, colNames=[], dataType="float64"):
+    def _saveH5Data(self, h5Path, h5Data, colNames=[], dataType=None):
         
+        if dataType is None:
+            dataType = self.DT_FLT
+            
         dLen = len(h5Data)
         if dLen > 0:
             dWidth = len(np.atleast_1d(h5Data[0]))
@@ -273,4 +362,4 @@ class HDF5Import:
         
         return dSet
     
-# End Class Concatenator
+# End Class HDF5Import

@@ -15,7 +15,8 @@ currPath         = path.dirname(path.realpath(__file__))
 dumpFile         = path.join(currPath,"dump_ip1.dat")
 scatterLogFile   = path.join(currPath,"scatter_log.dat")
 collSummaryFile  = path.join(currPath,"coll_summary.dat")
-collFirstImpFile = path.join(currPath,"FirstImpacts.dat")
+collFirstImpFile = path.join(currPath,"first_impacts.dat")
+collScatterFile  = path.join(currPath,"coll_scatter.dat")
 
 def testDumpFile():
     stData = STDump(dumpFile)
@@ -58,3 +59,11 @@ def testCollFirstImpacts():
         "X_IN", "XP_IN", "Y_IN", "YP_IN",
         "X_OUT","XP_OUT","Y_OUT","YP_OUT"
     ])) == 14
+
+def testCollScatter():
+    stData = STDump(collScatterFile)
+    stData.readAll()
+    assert stData.nLines == 15
+    assert len(set(stData.colNames).intersection(
+        ["ICOLL", "ITURN",  "NP","NABS","DP","DX","DY"]
+    )) == 7

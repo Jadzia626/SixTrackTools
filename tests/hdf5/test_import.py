@@ -21,7 +21,8 @@ dump1File        = path.join(currPath,"dump_ip1.dat")
 dump5File        = path.join(currPath,"dump_ip5.dat")
 scatterLogFile   = path.join(currPath,"scatter_log.dat")
 collSummaryFile  = path.join(currPath,"coll_summary.dat")
-collFirstImpFile = path.join(currPath,"FirstImpacts.dat")
+collFirstImpFile = path.join(currPath,"first_impacts.dat")
+collScatterFile  = path.join(currPath,"coll_scatter.dat")
 
 if path.isfile(hdf5File):
     unlink(hdf5File)
@@ -50,6 +51,11 @@ def testLoadCollFirstImpacts():
     assert     h5Imp.importCollFirstImpacts(collFirstImpFile)
     assert not h5Imp.importCollFirstImpacts(dump1File)
     assert not h5Imp.importCollFirstImpacts("non/existent/file")
+
+def testLoadCollScatter():
+    assert     h5Imp.importCollScatter(collScatterFile)
+    assert not h5Imp.importCollScatter(dump1File)
+    assert not h5Imp.importCollScatter("non/existent/file")
 
 def testCloseFile():
     assert h5Imp.closeFile()

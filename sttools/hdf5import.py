@@ -312,7 +312,7 @@ class HDF5Import:
                 ],
                 dtype=[
                     ("NAME",   self.DT_INT),
-                    ("ITURN",   self.DT_INT),
+                    ("ITURN",  self.DT_INT),
                     ("ICOLL",  self.DT_INT),
                     ("NABS",   self.DT_INT),
                     ("S_IMP",  self.DT_FLT),
@@ -333,6 +333,59 @@ class HDF5Import:
             h5Set.attrs.create("UNIT_S_OUT", "m", dtype=self.DT_STR)
             h5Set.attrs.create("UNIT_X_IN",  "m", dtype=self.DT_STR)
             h5Set.attrs.create("UNIT_X_OUT", "m", dtype=self.DT_STR)
+            
+        else:
+            logger.error("Unexpected header variables in %s" % path.basename(dataFile))
+            return False
+        
+        return True
+    
+    #
+    #  Import SixTrack COLLIMATION Coll Scatter File
+    #
+    def importCollScatter(self, dataFile):
+        """
+        Import SixTrack COLLIMATION Coll Scatter File
+        """
+        
+        if not path.isfile(dataFile):
+            logger.error("File not found %s" % dataFile)
+            return False
+        
+        stData = STDump(dataFile)
+        stData.readAll()
+        
+        validCols = ["ICOLL","ITURN","NP","NABS","DP","DX","DY"]
+        
+        if len(set(stData.colNames).intersection(validCols)) == len(validCols):
+            
+            if stData.nLines == 0:
+                logger.error("The data file has no data")
+                return False
+            
+            # Save Data
+            h5Data = np.core.records.fromarrays(
+                [
+                    stData.allData["ICOLL"],
+                    stData.allData["ITURN"],
+                    stData.allData["NP"],
+                    stData.allData["NABS"],
+                    stData.allData["DP"],
+                    stData.allData["DX"],
+                    stData.allData["DY"]
+                ],
+                dtype=[
+                    ("ICOLL", self.DT_INT),
+                    ("ITURN", self.DT_INT),
+                    ("NP",    self.DT_INT),
+                    ("NABS",  self.DT_INT),
+                    ("DP",    self.DT_FLT),
+                    ("DX",    self.DT_FLT),
+                    ("DY",    self.DT_FLT)
+                ]
+            )
+            h5Grp = self._createH5Group(self.h5File,"collimation")
+            h5Set = h5Grp.create_dataset("coll_scatter",data=h5Data)
             
         else:
             logger.error("Unexpected header variables in %s" % path.basename(dataFile))

@@ -65,5 +65,5 @@ def testCollScatter():
     stData.readAll()
     assert stData.nLines == 15
     assert len(set(stData.colNames).intersection(
-        ["ICOLL", "ITURN",  "NP","NABS","DP","DX","DY"]
+        ["ICOLL","ITURN","NP","NABS","DP","DX","DY"]
     )) == 7

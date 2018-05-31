@@ -1,4 +1,7 @@
 # General
 *.pyc
 .cache
-*.hdf5
+
+# Specific
+tests/hdf5/test.hdf5
+tests/concat/test*.hdf5

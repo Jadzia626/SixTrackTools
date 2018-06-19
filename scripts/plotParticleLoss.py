@@ -47,8 +47,10 @@ if dataFiles is None:
 
 collList = None
 collHits = {"IMP":{}, "ABS":{}}
-tImp = 0
-tAbs = 0
+collImp  = 0
+collAbs  = 0
+nParts   = 0
+nTurns   = 0
 for inFile in dataFiles:
     
     filePath = path.join(dataFolder,inFile)
@@ -57,7 +59,9 @@ for inFile in dataFiles:
         print("ERROR File not found: %s" % filePath)
         sys.exit(1)
     
-    h5File = h5py.File(filePath,mode="r")
+    h5File  = h5py.File(filePath,mode="r")
+    nParts += h5File["/"].attrs["Particles"]
+    nTurns  = h5File["/"].attrs["Turns"]
     
     # Collimation Data
     dSet = h5File["/collimation/coll_summary"]
@@ -78,12 +82,21 @@ for inFile in dataFiles:
     for iColl, nImp, nAbs in dSet["ICOLL","NIMP","NABS"]:
         collHits["IMP"][iColl] += nImp
         collHits["ABS"][iColl] += nAbs
-        tImp += nImp
-        tAbs += nAbs
+        collImp += nImp
+        collAbs += nAbs
     
     h5File.close()
 
 # Print summaries
+print("")
+print("###################")
+print("# ~o~ SUMMARY ~o~ #")
+print("###################")
+print("")
+print(" Particles: %d" % nParts)
+print(" Turns:     %d" % nTurns)
+
+# Collimation
 print("")
 print(" Collimation Summary")
 print("=====================")
@@ -96,25 +109,23 @@ for iColl in collList["ID"].keys():
         iColl,
         collList["ID"][iColl],
         collHits["IMP"][iColl],
-        100*collHits["IMP"][iColl]/tImp,
+        100*collHits["IMP"][iColl]/collImp,
         collHits["ABS"][iColl],
-        100*collHits["ABS"][iColl]/tAbs,
+        100*collHits["ABS"][iColl]/collAbs,
     ))
 print("-------+----------------------+--------+-------+--------+-------")
-print(" %5d |                      | %6d |       | %6d |       " % (
+print(" %5d |                      | %6d | %5.2f | %6d | %5.2f " % (
     len(collList["ID"]),
-    tImp,
-    tAbs,
+    collImp,
+    100*collImp/nParts,
+    collAbs,
+    100*collAbs/nParts,
 ))
 
-# fig1 = plt.figure(1,figsize=(5, 15),dpi=100)
-# fig1.clf()
-
-# plt.rcdefaults()
+# Plot
 fig1, ax1 = plt.subplots(figsize=(7, 9),dpi=100)
 plt.ion()
 
-# Example data
 pLabels = []
 pImp    = []
 pAbs    = []
@@ -122,8 +133,7 @@ for iColl in collList["ID"].keys():
     pLabels.append(collList["ID"][iColl])
     pImp.append(collHits["IMP"][iColl])
     pAbs.append(collHits["ABS"][iColl])
-    
-# people = ('Tom', 'Dick', 'Harry', 'Slim', 'Jim')
+
 yPos = np.arange(len(pLabels))
 
 ax1.barh(yPos-0.2, pImp, height=0.4, align="center", color="green")
@@ -135,5 +145,10 @@ ax1.set_title("Collimation Hits and Absorbtions")
 ax1.legend(("Impacts","Absorbtions"))
 
 plt.subplots_adjust(left=0.20, right=0.95, top=0.95, bottom=0.05)
+
+
+
+
+
 plt.draw()
 plt.show(block=True)

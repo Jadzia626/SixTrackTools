@@ -16,6 +16,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from os import path, listdir
+from matplotlib.ticker import MaxNLocator
 
 # Variables and Flags
 
@@ -45,27 +46,49 @@ if dataFiles is None:
         if fExt in extList:
             dataFiles.append(elem)
 
+
+##################
+#  COLLECT DATA  #
+##################
+
+lenLHC = [
+    26658.8832, # LHC Length
+    19994.1624, # IP1
+    23326.5990, # IP2
+        0.0000, # IP3
+     3332.2842, # IP4
+     6664.5684, # IP5
+     9997.0050, # IP6
+    13329.4416, # IP7
+    16650.6582, # IP8
+]
 collList = None
 collHits = {"IMP":{}, "ABS":{}}
 collImp  = 0
 collAbs  = 0
+lostTurn = []
+lostSPos = []
+nSurvive = []
+scatT    = []
 nParts   = 0
 nTurns   = 0
 for inFile in dataFiles:
-    
+
     filePath = path.join(dataFolder,inFile)
     print("Reading file: %s" % inFile)
     if not path.isfile(filePath):
         print("ERROR File not found: %s" % filePath)
         sys.exit(1)
-    
+
     h5File  = h5py.File(filePath,mode="r")
-    nParts += h5File["/"].attrs["Particles"]
-    nTurns  = h5File["/"].attrs["Turns"]
-    
+    nParts += int(h5File["/"].attrs["Particles"])
+    if nTurns == 0:
+        nTurns   = int(h5File["/"].attrs["Turns"])
+        nSurvive = np.zeros((nTurns+1,),dtype=int)
+
     # Collimation Data
     dSet = h5File["/collimation/coll_summary"]
-    
+
     # If first, create collimation index
     if collList is None:
         collList = {"ID":{}, "NAME":{}}
@@ -77,15 +100,38 @@ for inFile in dataFiles:
             # Initialise hits data
             collHits["IMP"][iColl] = 0
             collHits["ABS"][iColl] = 0
-    
+
     # Sum up hits
     for iColl, nImp, nAbs in dSet["ICOLL","NIMP","NABS"]:
         collHits["IMP"][iColl] += nImp
         collHits["ABS"][iColl] += nAbs
         collImp += nImp
         collAbs += nAbs
+
+    # Survival
+    dSet = h5File["/scatter/scatter_log"]
+    for sT, sTheta, sPhi in dSet["T","THETA","PHI"]:
+        scatT.append(sT*1e-6)
     
+    # Scatter Log
+    dSet = h5File["/collimation/survival"]
+    for iTurn, nSurv in dSet["TURN","NSURV"]:
+        nSurvive[iTurn] += nSurv
+
+    # Aperture Data
+    dSet = h5File["/aperture/lostpart"]
+    for iTurn, sLoss in dSet["TURN","SLOS"]:
+        if iTurn == 0: continue
+        lostTurn.append(iTurn)
+        lostSPos.append(sLoss)
+
     h5File.close()
+
+
+#############
+#  SUMMARY  #
+#############
+
 
 # Print summaries
 print("")
@@ -122,17 +168,40 @@ print(" %5d |                      | %6d | %5.2f | %6d | %5.2f " % (
     100*collAbs/nParts,
 ))
 
-# Plot
-fig1, ax1 = plt.subplots(figsize=(7, 9),dpi=100)
+# Survival
+print("")
+print(" Survival")
+print("==========")
+print("")
+print(" TURN |  COUNT ")
+print("------+--------")
+for iTurn in range(1,len(nSurvive)):
+    print(" %4d | %6d " % (
+        iTurn,
+        nSurvive[iTurn]
+    ))
+print("------+--------")
+
+
+###########
+#  PLOTS  #
+###########
+
+
+# Plot Collimation Losses
+fig1, ax1 = plt.subplots(figsize=(7, 8),dpi=100)
 plt.ion()
 
 pLabels = []
 pImp    = []
 pAbs    = []
 for iColl in collList["ID"].keys():
-    pLabels.append(collList["ID"][iColl])
-    pImp.append(collHits["IMP"][iColl])
-    pAbs.append(collHits["ABS"][iColl])
+    nImp = collHits["IMP"][iColl]
+    nAbs = collHits["ABS"][iColl]
+    if nImp > 0 or nAbs > 0:
+        pLabels.append(collList["ID"][iColl])
+        pImp.append(collHits["IMP"][iColl])
+        pAbs.append(collHits["ABS"][iColl])
 
 yPos = np.arange(len(pLabels))
 
@@ -141,13 +210,53 @@ ax1.barh(yPos+0.2, pAbs, height=0.4, align="center", color="red")
 ax1.set_yticks(yPos)
 ax1.set_yticklabels(pLabels)
 ax1.invert_yaxis()
+ax1.set_xlabel("Particle Count")
 ax1.set_title("Collimation Hits and Absorbtions")
 ax1.legend(("Impacts","Absorbtions"))
 
-plt.subplots_adjust(left=0.20, right=0.95, top=0.95, bottom=0.05)
+plt.subplots_adjust(left=0.22, right=0.95, top=0.95, bottom=0.07)
 
+# Plot Aperture Losses
+fig2, ax2 = plt.subplots(figsize=(7, 4),dpi=100)
+plt.ion()
 
+lostSPos = np.asarray(lostSPos)*1.0e-3
+lhcIPPos = np.asarray(lenLHC)*1.0e-3
 
+ax2.hist(lostSPos, bins=532)
+ax2.set_xticks(lhcIPPos)
+ax2.set_xticklabels(["IP3","IP1","IP2","IP3","IP4","IP5","IP6","IP7","IP8"])
+ax2.set_xlim([lhcIPPos[6]-0.2,lhcIPPos[8]+1.5])
+# ax2.set_xlim([0,lhcIPPos[0]])
+ax2.set_xlabel("s [km]")
+ax2.set_ylabel("Count/50m")
+ax2.set_title("Aperture Losses")
+
+plt.subplots_adjust(left=0.08, right=0.95, top=0.92, bottom=0.14)
+
+# Plot Survival
+fig3, ax3 = plt.subplots(figsize=(7, 4),dpi=100)
+plt.ion()
+
+ax3.plot(range(1,nTurns), nSurvive[1:nTurns], color="blue")
+ax3.xaxis.set_major_locator(MaxNLocator(integer=True))
+ax3.set_xlim([1,nTurns])
+ax3.set_xlabel("Turn")
+ax3.set_ylabel("Particle Count")
+ax3.set_title("Survival")
+
+plt.subplots_adjust(left=0.13, right=0.97, top=0.92, bottom=0.13)
+
+# Plot Scatter Log
+fig4, ax4 = plt.subplots(figsize=(7, 4),dpi=100)
+plt.ion()
+ax4.hist(scatT, bins=100, histtype="step", log=True)
+ax4.set_xlabel("|t| [GeV^2]")
+ax4.set_xlim([0,2])
+ax4.set_ylim([1,1e6])
+ax4.set_title("Scatter Angle")
+
+plt.subplots_adjust(left=0.08, right=0.95, top=0.91, bottom=0.15)
 
 
 plt.draw()

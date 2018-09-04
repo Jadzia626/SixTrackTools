@@ -30,7 +30,7 @@ elif len(sys.argv) > 2:
 else:
     print("ERROR plotParticleLoss expected one or two parameters:")
     print(" - dataFolder: The data storage folder")
-    print(" - dataFiles:  Optional. A list of files.")
+    print(" - dataFiles:  Optionally, a list of files.")
     sys.exit(1)
 
 if not path.isdir(dataFolder):
@@ -70,6 +70,7 @@ lostTurn = []
 lostSPos = []
 nSurvive = []
 scatT    = []
+scatDEE  = []
 nParts   = 0
 nTurns   = 0
 for inFile in dataFiles:
@@ -110,8 +111,9 @@ for inFile in dataFiles:
 
     # Survival
     dSet = h5File["/scatter/scatter_log"]
-    for sT, sTheta, sPhi in dSet["T","THETA","PHI"]:
+    for sT, sDEE, sTheta, sPhi in dSet["T","DEE","THETA","PHI"]:
         scatT.append(sT*1e-6)
+        scatDEE.append(sDEE)
     
     # Scatter Log
     dSet = h5File["/collimation/survival"]
@@ -119,7 +121,7 @@ for inFile in dataFiles:
         nSurvive[iTurn] += nSurv
 
     # Aperture Data
-    dSet = h5File["/aperture/lostpart"]
+    dSet = h5File["/aperture/losses"]
     for iTurn, sLoss in dSet["TURN","SLOS"]:
         if iTurn == 0: continue
         lostTurn.append(iTurn)
@@ -226,8 +228,7 @@ lhcIPPos = np.asarray(lenLHC)*1.0e-3
 ax2.hist(lostSPos, bins=532)
 ax2.set_xticks(lhcIPPos)
 ax2.set_xticklabels(["IP3","IP1","IP2","IP3","IP4","IP5","IP6","IP7","IP8"])
-ax2.set_xlim([lhcIPPos[6]-0.2,lhcIPPos[8]+1.5])
-# ax2.set_xlim([0,lhcIPPos[0]])
+ax2.set_xlim([0,lhcIPPos[0]])
 ax2.set_xlabel("s [km]")
 ax2.set_ylabel("Count/50m")
 ax2.set_title("Aperture Losses")
@@ -247,7 +248,7 @@ ax3.set_title("Survival")
 
 plt.subplots_adjust(left=0.13, right=0.97, top=0.92, bottom=0.13)
 
-# Plot Scatter Log
+# Plot Scatter Log T
 fig4, ax4 = plt.subplots(figsize=(7, 4),dpi=100)
 plt.ion()
 ax4.hist(scatT, bins=100, histtype="step", log=True)
@@ -257,6 +258,17 @@ ax4.set_ylim([1,1e6])
 ax4.set_title("Scatter Angle")
 
 plt.subplots_adjust(left=0.08, right=0.95, top=0.91, bottom=0.15)
+
+# Plot Scatter Log dE/E
+fig5, ax5 = plt.subplots(figsize=(7, 4),dpi=100)
+plt.ion()
+ax5.hist(scatDEE, bins=100, histtype="step", log=True)
+ax5.set_xlabel("dE/E")
+# ax5.set_xlim([0,2])
+# ax5.set_ylim([1,1e6])
+ax5.set_title("Energy Loss")
+
+# plt.subplots_adjust(left=0.08, right=0.95, top=0.91, bottom=0.15)
 
 
 plt.draw()

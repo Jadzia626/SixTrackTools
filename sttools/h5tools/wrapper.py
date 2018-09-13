@@ -14,7 +14,8 @@ import logging
 import numpy as np
 import h5py
 
-from os import path, listdir
+from os       import path, listdir
+from datetime import datetime
 
 from sttools.functions     import pPrintDict
 from sttools.h5tools.utils import H5Utils
@@ -26,6 +27,8 @@ class H5Wrapper():
     ORDERBY_SIMNO = 0
     ORDERBY_NAME  = 1
     ORDERBY_TIME  = 2
+
+    ORDERBY_VALID = [0,1,2]
 
     fileList = []   # The list of accepted files, in order
     fileMeta = {}   # The meta data of the files
@@ -41,7 +44,11 @@ class H5Wrapper():
 
         self.dataFolder  = dataFolder
         self.forceAccept = forceAccept
-        self.orderBy     = orderBy
+        if orderBy in self.ORDERBY_VALID:
+            self.orderBy = orderBy
+        else:
+            logger.error("OrderBy value %d is invalid" % orderBy)
+            return
 
         self.scanFolder()
 
@@ -56,6 +63,8 @@ class H5Wrapper():
         self.fileMeta = {}
 
         fileList = listdir(self.dataFolder)
+        sortList = []
+        readList = []
         logger.info("Loading files from '%s'" % self.dataFolder)
 
         for fName in fileList:
@@ -71,9 +80,11 @@ class H5Wrapper():
                 logger.info("%-56s [Not SixTrack]" % fStatus)
                 continue
             logger.info("%-56s [OK]" % fStatus)
+            timeStamp = H5Utils.getAttrString(fH5,"TimeStamp")
             self.nData += 1
             self.fileMeta[fBase] = {
-                "TimeStamp"  : H5Utils.getAttrString(fH5,"TimeStamp"),
+                "TimeStamp"  : timeStamp,
+                "NumTime"    : datetime.strptime(timeStamp,"%Y-%m-%dT%H:%M:%S.%f").timestamp(),
                 "CreatedBy"  : H5Utils.getAttrString(fH5,"CreatedBy"),
                 "SimNumber"  : fH5.attrs["SimNumber"][0],
                 "Particles"  : fH5.attrs["Particles"][0],
@@ -84,14 +95,32 @@ class H5Wrapper():
                 "TotalTime"  : fH5.attrs["TotalTime"][0],
                 "FileName"   : fName,
                 "FilePath"   : fPath,
+                "SimName"    : fBase,
             }
+            readList.append(fBase)
+            if   self.orderBy == self.ORDERBY_SIMNO:
+                sortList.append(self.fileMeta[fBase]["SimNumber"])
+            elif self.orderBy == self.ORDERBY_NAME:
+                sortList.append(fBase)
+            elif self.orderBy == self.ORDERBY_TIME:
+                sortList.append(self.fileMeta[fBase]["NumTime"])
 
-        pPrintDict(self.fileMeta)
-
-        # Create the sorted list
-
-
+        self.fileList = [x for _,x in sorted(zip(sortList,readList))]
 
         return True
+
+    def printSummary(self):
+
+        print(" Simulation Summary")
+        print("====================")
+        print("Path: %s" % self.dataFolder)
+        print("")
+
+        print("{:20} {:20} {:>9} {:>9}".format("Simulation","Software","Particles","Turns"))
+        print("-"*61)
+        for h5Set in self.fileList:
+            print("{SimName:20} {CreatedBy:20} {Particles:9d} {Turns:9d}".format(**self.fileMeta[h5Set]))
+
+        return
 
 # END Class H5Wrapper

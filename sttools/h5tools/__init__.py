@@ -14,12 +14,13 @@ import logging
 
 # Submodules
 from .concatenator import Concatenator
+from .wrapper      import H5Wrapper
 
-__all__ = ["Concatenator"]
+__all__ = ["Concatenator","H5Wrapper"]
 
 # Logging
 logger   = logging.getLogger(__name__)
-logLevel = logging.INFO
+logLevel = logging.DEBUG
 
 if logLevel == logging.DEBUG:
     logging.basicConfig(

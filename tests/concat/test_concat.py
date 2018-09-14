@@ -13,7 +13,7 @@ import filecmp as fcmp
 from os      import path, unlink
 from shutil  import copyfile
 
-from sttools import Concatenator
+from sttools.h5tools import Concatenator
 
 currPath = path.dirname(path.realpath(__file__))
 

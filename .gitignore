@@ -1,6 +1,7 @@
 # General
 *.pyc
 .cache
+.pytest_cache/
 
 # Specific
 tests/hdf5/test.hdf5

@@ -16,8 +16,7 @@ import h5py
 
 from os import path
 
-from .tablefs import TableFS
-from .stdump  import STDump
+from sttools.filetools import TableFS, STDump
 
 logger = logging.getLogger(__name__)
 

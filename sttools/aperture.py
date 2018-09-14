@@ -15,7 +15,7 @@ import numpy   as np
 import re
 
 from os import path
-from .tablefs import TableFS
+from sttools.filetools import TableFS
 
 logger = logging.getLogger(__name__)
 

@@ -8,8 +8,8 @@
       Geneva, Switzerland
 """
 
-from os      import path, unlink
-from sttools import STDump
+from os                import path, unlink
+from sttools.filetools import STDump
 
 currPath         = path.dirname(path.realpath(__file__))
 dumpFile         = path.join(currPath,"dump_ip1.dat")

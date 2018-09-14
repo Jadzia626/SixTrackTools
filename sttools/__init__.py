@@ -37,18 +37,37 @@ __email__      = "v.k.b.olsen@cern.ch"
 __status__     = "Perpetual Development"
 
 # Logging
-logger   = logging.getLogger(__name__)
-logLevel = logging.INFO
+logger = logging.getLogger(__name__)
 
-if logLevel == logging.DEBUG:
-    logging.basicConfig(
-        format  = "[%(asctime)s] %(name)s:%(lineno)d %(levelname)s: %(message)s",
-        level   = logging.DEBUG,
-        datefmt = "%Y-%m-%d %H:%M:%S",
-    )
-else:
-    logging.basicConfig(
-        format  = "%(levelname)s: %(message)s",
-        level   = logLevel,
-        datefmt = "%H:%M:%S",
-    )
+def setLoggingLevel(logLevel, showSource=False):
+
+    if isinstance(logLevel, str):
+        logLevel = logLevel.upper()
+
+    lvlMap = {
+        "CRITICAL" : logging.CRITICAL, # 50
+        "ERROR"    : logging.ERROR,    # 40
+        "WARNING"  : logging.WARNING,  # 30
+        "INFO"     : logging.INFO,     # 20
+        "DEBUG"    : logging.DEBUG,    # 10
+        "NOTSET"   : logging.NOTSET,   # 0
+    }
+    invMap = dict(zip(lvlMap.values(), lvlMap.keys()))
+    if logLevel in lvlMap.keys():
+        logLevel = lvlMap[logLevel]
+
+    if showSource:
+        logFormat = logging.Formatter(fmt = "{levelname:8} {name:>28}:{lineno:<4d}  {message}", style="{")
+    else:
+        logFormat = logging.Formatter(fmt = "{levelname:8}  {message}", style="{")
+    logger = logging.getLogger("sttools")
+    sHandle = logging.StreamHandler()
+    sHandle.setFormatter(logFormat)
+    logger.handlers = []
+    logger.setLevel(logLevel)
+    logger.addHandler(sHandle)
+
+    return True
+
+# Set default logging level
+setLoggingLevel(logging.INFO)

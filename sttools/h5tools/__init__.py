@@ -19,18 +19,4 @@ from .wrapper      import H5Wrapper
 __all__ = ["Concatenator","H5Wrapper"]
 
 # Logging
-logger   = logging.getLogger(__name__)
-logLevel = logging.DEBUG
-
-if logLevel == logging.DEBUG:
-    logging.basicConfig(
-        format  = "[%(asctime)s] %(name)s:%(lineno)d %(levelname)s: %(message)s",
-        level   = logging.DEBUG,
-        datefmt = "%Y-%m-%d %H:%M:%S",
-    )
-else:
-    logging.basicConfig(
-        format  = "%(levelname)s: %(message)s",
-        level   = logLevel,
-        datefmt = "%H:%M:%S",
-    )
+logger = logging.getLogger(__name__)

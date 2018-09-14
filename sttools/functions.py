@@ -30,7 +30,6 @@ def formatNumberExp(floatVal, formatString="%7.2f", expSize=2, nullLimit=1e-18):
     else:
         floatVal = 0.0
 
-
     if expVal >= 0:
         expSign = "+"
     else:

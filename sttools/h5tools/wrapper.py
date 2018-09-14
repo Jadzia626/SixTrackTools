@@ -107,7 +107,54 @@ class H5Wrapper():
 
         self.fileList = [x for _,x in sorted(zip(sortList,readList))]
 
+        fH5.close()
+
         return True
+
+    #
+    # Loading and Closing of DataSets
+    #
+
+    def loadDataSet(self, setIdx=0):
+        if abs(setIdx) < self.nData:
+            # We allow negative indices for looking backwards in the array
+            fPath = self.fileMeta[self.fileList[setIdx]]["FilePath"]
+            fName = self.fileMeta[self.fileList[setIdx]]["FileName"]
+            self.data    = h5py.File(fPath,"r")
+            self.currIdx = setIdx
+            logger.info("Loading dataset %d: %s" % (setIdx,fName))
+            return True
+        else:
+            logger.error("No dataset with index %d" % setIdx)
+            return False
+    
+    def loadNext(self):
+        self.currIdx += 1
+        if self.currIdx >= self.nData:
+            logger.debug("You have already reached the last dataset.")
+            return False
+        return self.loadDataSet(self.currIdx)
+
+    def loadPrev(self):
+        self.currIdx -= 1
+        if self.currIdx < 0:
+            logger.debug("You have already reached the first dataset.")
+            return False
+        return self.loadDataSet(self.currIdx)
+
+    def loadFirst(self):
+        return self.loadDataSet(0)
+
+    def loadLast(self):
+        return self.loadDataSet(-1)
+
+    def closeDataSet(self):
+        self.data.close()
+        return True
+
+    #
+    # print Information
+    #
 
     def printSummary(self):
 

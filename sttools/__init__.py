@@ -13,13 +13,11 @@
 import logging
 
 # Submodules
-from .aperture     import Aperture
-from .constants    import Const
-from .hdf5import   import HDF5Import
-from .partdist     import PartDist
-from .twiss        import Twiss
+from sttools.aperture     import Aperture
+from sttools.constants    import Const
+from sttools.partdist     import PartDist
 
-__all__ = ["Aperture","Const","HDF5Import","PartDist","Twiss"]
+__all__ = ["Aperture","Const","PartDist"]
 
 # Package Meta
 __author__     = "Veronica Berglyd Olsen"

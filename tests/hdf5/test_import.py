@@ -13,7 +13,7 @@ import filecmp as fcmp
 from os      import path, unlink
 from hashlib import md5
 
-from sttools import HDF5Import
+from sttools.h5tools import H5Import
 
 currPath         = path.dirname(path.realpath(__file__))
 hdf5File         = path.join(currPath,"test.hdf5")
@@ -27,7 +27,7 @@ collScatterFile  = path.join(currPath,"coll_scatter.dat")
 if path.isfile(hdf5File):
     unlink(hdf5File)
 
-h5Imp = HDF5Import(currPath,path.join(currPath,"test.hdf5"),True)
+h5Imp = H5Import(currPath,path.join(currPath,"test.hdf5"),True)
 
 def testOpenFile():
     assert h5Imp.openFile()

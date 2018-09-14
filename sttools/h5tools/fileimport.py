@@ -20,7 +20,7 @@ from sttools.filetools import TableFS, STDump
 
 logger = logging.getLogger(__name__)
 
-class HDF5Import:
+class H5Import:
     
     DT_INT = "int32"
     DT_FLT = "float64"

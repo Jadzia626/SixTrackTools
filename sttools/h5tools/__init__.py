@@ -13,10 +13,11 @@
 import logging
 
 # Submodules
-from .concatenator import Concatenator
-from .wrapper      import H5Wrapper
+from sttools.h5tools.concatenator import Concatenator
+from sttools.h5tools.fileimport   import H5Import
+from sttools.h5tools.wrapper      import H5Wrapper
 
-__all__ = ["Concatenator","H5Wrapper"]
+__all__ = ["Concatenator","H5Import","H5Wrapper"]
 
 # Logging
 logger = logging.getLogger(__name__)

@@ -14,8 +14,9 @@ import logging
 
 # Submodules
 from sttools.utils.curvefit import CurveFit
+from sttools.utils.twiss    import Twiss
 
-__all__ = ["CurveFit"]
+__all__ = ["CurveFit","Twiss"]
 
 # Logging
 logger = logging.getLogger(__name__)

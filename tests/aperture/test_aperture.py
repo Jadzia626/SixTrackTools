@@ -10,8 +10,8 @@
 
 import filecmp as fcmp
 
-from os      import path, unlink
-from sttools import Aperture
+from os                import path, unlink
+from sttools.filetools import Aperture
 
 currPath = path.dirname(path.realpath(__file__))
 

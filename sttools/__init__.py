@@ -13,12 +13,11 @@
 import logging
 
 # Submodules
-from sttools.aperture  import Aperture
 from sttools.constants import Const
 from sttools.partdist  import PartDist
 from sttools.physics   import Physics
 
-__all__ = ["Aperture","Const","PartDist","Physics"]
+__all__ = ["Const","PartDist","Physics"]
 
 # Package Meta
 __author__     = "Veronica Berglyd Olsen"

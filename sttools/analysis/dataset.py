@@ -13,10 +13,12 @@
 import logging
 import numpy as np
 
-from os import path
+from os import path, listdir
 
-from sttools.functions       import parseKeyWordArgs, checkValue
-from sttools.h5tools.wrapper import H5Wrapper
+from sttools.functions         import parseKeyWordArgs, checkValue
+from sttools.h5tools.wrapper   import H5Wrapper
+from sttools.filetools.stdump  import STDump
+from sttools.filetools.colmaps import STColMaps
 
 # Logging
 logger = logging.getLogger(__name__)
@@ -26,18 +28,18 @@ class DataSet():
     TYPE_FILE = 0
     TYPE_HDF5 = 1
 
-    # Holds the loaded data as a numpy dict
-    data = None
-
     def __init__(self, dataSet, **theArgs):
 
+        self.initOK   = False
         self.dataSet  = dataSet
         self.fileList = []
+        self.h5Set    = None
 
         valArgs = {
-            "fileType"    : self.TYPE_FILE,
-            "h5Set"       : None,
-            "dataFolders" : [],
+            "fileType"   : self.TYPE_FILE,
+            "h5Set"      : None,
+            "dataFolder" : None,
+            "loadOnly"   : None,
         }
         kwArgs = parseKeyWordArgs(valArgs, theArgs)
 
@@ -47,50 +49,76 @@ class DataSet():
             self.fileType = self.TYPE_HDF5
         else:
             logger.error("Unknown fileType specified.")
-            exit(1)
+            return
 
         if self.fileType == self.TYPE_FILE:
-            if isinstance(kwArgs["dataFolders"], str):
-                self.dataFolders = [kwArgs["dataFolders"]]
+            if isinstance(kwArgs["loadOnly"], str):
+                loadOnly = kwArgs["loadOnly"].split(",")
             else:
-                self.dataFolders = kwArgs["dataFolders"]
-            for dataFolder in self.dataFolders:
-                fPath = path.join(dataFolder,dataSet)
-                if path.isfile(fPath):
-                    self.fileList.append(fPath)
-                else:
-                    logger.error("Cannot find the file: %s" % fPath)
-                    exit(1)
+                loadOnly = kwArgs["loadOnly"]
+            dataFolder = kwArgs["dataFolder"]
+            if not path.isdir(kwArgs["dataFolder"]):
+                logger.error("Path not found: %s" % dataFolder)
+                return
+            dirList = listdir(dataFolder)
+            if loadOnly is None:
+                loadOnly = dirList.copy()
+            for dirElem in dirList:
+                setPath = path.join(dataFolder,dirElem)
+                if path.isdir(setPath) and dirElem in loadOnly:
+                    fPath = path.join(setPath,dataSet)
+                    if path.isfile(fPath):
+                        self.fileList.append(fPath)
+                        logger.debug("Found %s" % fPath)
+                    else:
+                        logger.error("Cannot find the file: %s" % fPath)
+                        return
 
         if self.fileType == self.TYPE_HDF5:
             if isinstance(kwArgs["h5Set"],H5Wrapper):
                 self.h5Set = kwArgs["h5Set"]
             else:
                 logger.error("Not a valid H5Wrapper object.")
-                exit(1)
+                return
+
+        self.initOK = True
 
         return
 
-    def loadData(self, startIdx=0, endIdx=0):
-        nSets = endIdx-startIdx+1
-        if nSets <= 0:
-            logger.error("Your range of datasets to load makes no sense. Is endIdx >= startIdx?")
-            return False
+    def getNumSets(self):
+        if self.fileType == self.TYPE_FILE:
+            return len(self.fileList)
+        if self.fileType == self.TYPE_HDF5 and self.h5Set is not None:
+            return self.h5Set.nData
+        return None
+
+    def loadData(self, loadIdx=0):
+        if self.fileType == self.TYPE_FILE:
+            tmpData = STDump(self.fileList[loadIdx])
+            tmpData.readAll()
+            retData = {}
+            if self.dataSet in STColMaps.MAP_COLS.keys():
+                logger.debug("Remapping columns of datset '%s'" % self.dataSet)
+                for colName in tmpData.colNames:
+                    logger.debug(" * %-20s = %-20s" % (colName,STColMaps.MAP_COLS[self.dataSet][colName]))
+                    retData[STColMaps.MAP_COLS[self.dataSet][colName]] = tmpData.allData[colName]
+            else:
+                logger.debug("Not remapping columns of datset '%s'" % self.dataSet)
+                for colName in tmpData.colNames:
+                    retData[colName] = tmpData.allData[colName]
+            return retData
         if self.fileType == self.TYPE_HDF5:
-            self.__loadDataHDF5(startIdx, endIdx)
+            self.h5Set.loadDataSet(loadIdx)
+            return self.h5Set.data[self.dataSet]
+        return None
 
-    def __loadDataHDF5(self, startIdx, endIdx):
+    def iterateData(self):
+        if self.fileType == self.TYPE_FILE:
+            for n in range(len(self.fileList)):
+                yield self.loadData(n)
+        if self.fileType == self.TYPE_HDF5 and self.h5Set is not None:
+            for n in range(self.h5Set.nData):
+                yield self.loadData(n)
+        return None
 
-        self.h5Set.loadDataSet(startIdx)
-        self.data = self.h5Set.data[self.dataSet]
-
-        if endIdx == startIdx:
-            return
-
-        for s in range(startIdx+1,endIdx):
-            self.h5Set.loadDataSet(startIdx)
-            tmpData = self.h5Set.data[self.dataSet]
-            print(list(tmpData.keys()))
-
-
-# END Class Beams
+# END Class DataSet

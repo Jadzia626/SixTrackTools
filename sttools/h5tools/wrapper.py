@@ -17,7 +17,7 @@ import h5py
 from os       import path, listdir
 from datetime import datetime
 
-from sttools.functions     import pPrintDict
+from sttools.functions     import pPrintDict, parseKeyWordArgs
 from sttools.h5tools.utils import H5Utils
 
 logger = logging.getLogger(__name__)
@@ -36,18 +36,26 @@ class H5Wrapper():
     currIdx  = 0    # The index of the currently loaded data
     nData    = 0    # Number of data files
 
-    def __init__(self, dataFolder, orderBy=ORDERBY_SIMNO, forceAccept=False):
+    def __init__(self, dataFolder, **theArgs):
 
         if not path.isdir(dataFolder):
-            logger.error("Path not found: %s" % inFolder)
+            logger.error("Path not found: %s" % dataFolder)
             return
 
+        valArgs = {
+            "orderBy"     : self.ORDERBY_SIMNO,
+            "forceAccept" : False,
+            "loadOnly"    : None,
+        }
+        kwArgs = parseKeyWordArgs(valArgs, theArgs)
+
         self.dataFolder  = dataFolder
-        self.forceAccept = forceAccept
-        if orderBy in self.ORDERBY_VALID:
-            self.orderBy = orderBy
+        self.forceAccept = kwArgs["forceAccept"]
+        self.loadOnly    = kwArgs["loadOnly"]
+        if kwArgs["orderBy"] in self.ORDERBY_VALID:
+            self.orderBy = kwArgs["orderBy"]
         else:
-            logger.error("OrderBy value %d is invalid" % orderBy)
+            logger.error("OrderBy value %d is invalid" % kwArgs["orderBy"])
             return
 
         self.scanFolder()
@@ -67,10 +75,16 @@ class H5Wrapper():
         readList = []
         logger.info("Loading files from '%s'" % self.dataFolder)
 
+        if self.loadOnly is None:
+            self.loadOnly = fileList.copy()
+
         for fName in fileList:
             fBase, fExt = path.splitext(fName)
             fPath       = path.join(self.dataFolder,fName)
             fStatus     = "Checking file '%s'" % fName
+            if fName not in self.loadOnly:
+                logger.info("%-56s [Ignored]" % fStatus)
+                continue
             try:
                 fH5 = h5py.File(fPath,"r")
             except:

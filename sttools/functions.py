@@ -58,7 +58,7 @@ def parseKeyWordArgs(refDict, checkDict):
     for keyWord in checkDict.keys():
         if keyWord.lower() in valMap.keys():
             # Copy the value from checkDict to the correct corresponding key
-            retDict[valMap[keyWord.lower()]] = checkDict[kewWord]
+            retDict[valMap[keyWord.lower()]] = checkDict[keyWord]
         else:
             # Invalid key. Return an empty result
             logger.error("Invalid key '%s' in keyword argument list." % keyWord)

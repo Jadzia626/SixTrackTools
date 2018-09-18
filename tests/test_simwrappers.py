@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*
-"""Test Script for Aperture Class
+"""Test Script for Simulation and DataSet Wrappers
   
-  SixTrack Tools - Test Script for Aperture Class
- =================================================
+  SixTrack Tools - Test Script for Simulation and DataSet Wrappers
+ ==================================================================
   By: Veronica Berglyd Olsen
       CERN (BE-ABP-HSS)
       Geneva, Switzerland
 """
 
-import filecmp as fcmp
-
 from os      import path, unlink, listdir
 from sttools import setLoggingLevel, SixTrackSim, DataSet
 
 currPath = path.dirname(path.realpath(__file__))
-h5Path   = path.join(currPath,"..","simdata","hdf5")
+h5Path   = path.join(currPath,"simdata","hdf5")
 
 setLoggingLevel("DEBUG")
 

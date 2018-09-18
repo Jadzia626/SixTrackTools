@@ -13,10 +13,9 @@
 import logging
 
 # Submodules
-from sttools.analysis.dataset import DataSet
-from sttools.analysis.beams   import Beams
+from sttools.analysis.beams import Beams
 
-__all__ = ["DataSet","Beams"]
+__all__ = [Beams"]
 
 # Logging
 logger = logging.getLogger(__name__)

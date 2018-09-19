@@ -14,12 +14,11 @@ import logging
 
 # Submodules
 from sttools.constants  import Const
-from sttools.partdist   import PartDist
 from sttools.physics    import Physics
 from sttools.simulation import SixTrackSim
 from sttools.dataset    import DataSet
 
-__all__ = ["Const","PartDist","Physics","SixTrackSim","DataSet"]
+__all__ = ["Const","Physics","SixTrackSim","DataSet"]
 
 # Package Meta
 __author__     = "Veronica Berglyd Olsen"

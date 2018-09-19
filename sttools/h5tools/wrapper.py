@@ -48,6 +48,7 @@ class H5Wrapper():
         }
         kwArgs = parseKeyWordArgs(valArgs, theArgs)
 
+        self.h5File      = None
         self.simFolder   = simFolder
         self.forceAccept = kwArgs["forceAccept"]
         self.loadOnly    = kwArgs["loadOnly"]
@@ -65,10 +66,7 @@ class H5Wrapper():
         return len(self.simList)
 
     def __contains__(self, simSet):
-        if simSet in self.simList:
-            return True
-        else:
-            return False
+        return simSet in self.simList
 
     def __getitem__(self, simSet):
         if isinstance(simSet, int):
@@ -85,19 +83,27 @@ class H5Wrapper():
         else:
             raise KeyError("Key value must be either a string or an integer.")
         fPath = self.simMeta[simKey]["SimPath"]
+        self.h5File = h5py.File(fPath,"r")
         logger.info("Loading dataset '%s'" % (simKey))
-        return h5py.File(fPath,"r")
+        return self.h5File
 
     def __iter__(self):
         self.iterIdx = 0
-        return self.__getitem__[self.iterIdx]
+        return self
 
     def __next__(self):
         self.iterIdx += 1
-        if self.iterIdx >= len(self.simList):
+        if self.iterIdx > len(self.simList):
+            self.iterIdx -= 1
             raise StopIteration
         else:
-            return self.__getitem__[self.iterIdx]
+            return self.__getitem__(self.iterIdx-1)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exArgs):
+        self.close()
 
     def __str__(self):
         sumStr  = " Simulation Summary\n"
@@ -113,6 +119,10 @@ class H5Wrapper():
     #
     #  Class Methods
     #
+
+    def close(self):
+        if self.h5File is not None:
+            self.h5File.close()
 
     def checkDataSetKey(self, reqSet):
         """Check if a dataset exists and if necessary translate the key.
@@ -139,7 +149,7 @@ class H5Wrapper():
             if reqSet == "scatter_log":     return "scatter/scatter_log"
             if reqSet == "scatter_summary": return "scatter/summary"
             return None
-    
+
     #
     #  Internal Functions
     #

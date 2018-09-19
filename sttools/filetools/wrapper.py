@@ -58,7 +58,16 @@ class FileWrapper():
             logger.error("OrderBy value %d is invalid" % kwArgs["orderBy"])
             return
 
-        self._scanFolder()
+        if self.isSingular:
+            self.simMeta["SixTrackSim"] = {
+                "SimPath"   : simFolder,
+                "SimName"   : "SixTrackSim",
+                "DataFiles" : self._scanFiles(simFolder),
+                "DataSets"  : self._scanSets(simFolder),
+            }
+            self.simList = ["SixTrackSim"]
+        else:
+            self._scanFolder()
 
         return
 
@@ -66,10 +75,7 @@ class FileWrapper():
         return len(self.simList)
 
     def __contains__(self, simSet):
-        if simSet in self.simList:
-            return True
-        else:
-            return False
+        return simSet in self.simList
 
     def __getitem__(self, simSet):
         if isinstance(simSet, int):
@@ -90,14 +96,21 @@ class FileWrapper():
 
     def __iter__(self):
         self.iterIdx = 0
-        return self.__getitem__[self.iterIdx]
+        return self
 
     def __next__(self):
         self.iterIdx += 1
-        if self.iterIdx >= len(self.simList):
+        if self.iterIdx > len(self.simList):
+            self.iterIdx -= 1
             raise StopIteration
         else:
-            return self.__getitem__[self.iterIdx]
+            return self.__getitem__(self.iterIdx-1)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exArgs):
+        self.close()
 
     def __str__(self):
         return "SixTrack Simulation Data"
@@ -105,6 +118,9 @@ class FileWrapper():
     #
     #  Class Methods
     #
+
+    def close(self):
+        return # Dummy for SixTrackSim wrapper
 
     def checkDataSetKey(self, reqSet):
         """Check if a dataset exists and if necessary translate the key.
@@ -218,11 +234,12 @@ class FileWrapper():
 
 class SimWrapper():
 
-    def __init__(self, simName, simMeta):
+    simName = None
+    simMeta = None
 
+    def __init__(self, simName, simMeta):
         self.simName = simName
         self.simMeta = simMeta
-
         return
 
     def __contains__(self, dataSet):

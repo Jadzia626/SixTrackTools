@@ -30,6 +30,7 @@ class SixTrackSim():
     simData    = None  # Holds either a H5Wrapper or FileWrapper object
     dataType   = None  # Whether the simulation set is HDF5 or TEXT
     isSingular = False # Whether a TEXT set is only one simulation
+    iterIdx    = 0     # Index for iterator
 
     def __init__(self, simFolder, **theArgs):
         """Wraps a folder containing SixTrack simulations and scans the content looking for either
@@ -121,33 +122,62 @@ class SixTrackSim():
             )
 
         return
-    
+
     def __len__(self):
-        if self.simData is None:
-            return None
-        else:
-            return len(self.simData)
-    
+        self._checkValid()
+        return len(self.simData)
+
+    def __contains__(self, simSet):
+        self._checkValid()
+        return simSet in self.simData
+
     def __getitem__(self, simSet):
-        if self.simData is None:
-            return None
-        else:
-            return self.simData[simSet]
+        self._checkValid()
+        return self.simData[simSet]
 
     def __str__(self):
-        if self.simData is None:
-            return None
+        self._checkValid()
+        return self.simData.__str__()
+
+    def __iter__(self):
+        self._checkValid()
+        self.iterIdx = 0
+        return self
+
+    def __next__(self):
+        self._checkValid()
+        self.iterIdx += 1
+        if self.iterIdx > len(self.simData):
+            self.iterIdx -= 1
+            raise StopIteration
         else:
-            return self.simData.__str__()
+            return self.__getitem__(self.iterIdx-1)
+
+    def __enter__(self):
+        self._checkValid()
+        return self
+
+    def __exit__(self, *exArgs):
+        self.close()
 
     #
     #  Class Methods
     #
 
+    def close(self):
+        self._checkValid()
+        return self.simData.close()
+
     def checkDataSetKey(self, reqSet):
+        self._checkValid()
+        return self.simData.checkDataSetKey(reqSet)
+
+    #
+    #  Internal Functions
+    #
+
+    def _checkValid(self):
         if self.simData is None:
-            return None
-        else:
-            return self.simData.checkDataSetKey(reqSet)
+            raise ValueError("No simulation loaded.")
 
 # END Class SixTrackSim

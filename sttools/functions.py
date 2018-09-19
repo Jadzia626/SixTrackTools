@@ -77,3 +77,11 @@ def checkValue(theValue, theList, caseSensitive=True):
         if theCheck == theValue:
             return True
     return False
+
+def symmetricRange(minVal, maxVal, meanVal):
+    """Returns a tuple of a range symmetric around mean with the same extent.
+    """
+    maxVal -= meanVal
+    minVal -= meanVal
+    extVal  = max(abs(minVal),abs(maxVal))
+    return meanVal-extVal, meanVal+extVal

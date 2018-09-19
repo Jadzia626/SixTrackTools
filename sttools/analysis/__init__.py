@@ -15,7 +15,7 @@ import logging
 # Submodules
 from sttools.analysis.beams import Beams
 
-__all__ = [Beams"]
+__all__ = ["Beams"]
 
 # Logging
 logger = logging.getLogger(__name__)

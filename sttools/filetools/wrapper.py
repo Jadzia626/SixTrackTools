@@ -49,6 +49,7 @@ class FileWrapper():
         }
         kwArgs = parseKeyWordArgs(valArgs, theArgs)
 
+        self.stFile      = None
         self.forceAccept = kwArgs["forceAccept"]
         self.loadOnly    = kwArgs["loadOnly"]
         self.isSingular  = kwArgs["isSingular"]
@@ -91,8 +92,9 @@ class FileWrapper():
                 raise KeyError("Simulation key does not exist in this set.")
         else:
             raise KeyError("Key value must be either a string or an integer.")
+        self.stFile = SimWrapper(simKey,self.simMeta[simKey])
         logger.info("Loading dataset '%s'" % (simKey))
-        return SimWrapper(simKey,self.simMeta[simKey])
+        return self.stFile
 
     def __iter__(self):
         self.iterIdx = 0

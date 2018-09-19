@@ -134,6 +134,12 @@ class SixTrackSim():
         else:
             return self.simData[simSet]
 
+    def __str__(self):
+        if self.simData is None:
+            return None
+        else:
+            return self.simData.__str__()
+
     #
     #  Class Methods
     #

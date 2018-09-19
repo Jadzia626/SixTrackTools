@@ -99,6 +99,9 @@ class FileWrapper():
         else:
             return self.__getitem__[self.iterIdx]
 
+    def __str__(self):
+        return "SixTrack Simulation Data"
+
     #
     #  Class Methods
     #

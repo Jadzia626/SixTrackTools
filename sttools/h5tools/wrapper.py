@@ -104,10 +104,10 @@ class H5Wrapper():
         sumStr += "====================\n"
         sumStr += "Path: %s\n" % self.simFolder
         sumStr += "\n"
-        sumStr += "{:20} {:20} {:>9} {:>9}\n".format("Simulation","Software","Particles","Turns")
-        sumStr += "-"*61
-        for h5Set in self.fileList:
-            sumStr += "{SimName:20} {CreatedBy:20} {Particles:9d} {Turns:9d}\n".format(**self.fileMeta[h5Set])
+        sumStr += " {:20} {:20} {:>9} {:>9}\n".format("Simulation","Software","Particles","Turns")
+        sumStr += "="*63 + "\n"
+        for h5Set in self.simList:
+            sumStr += " {SimName:20} {CreatedBy:20} {Particles:9d} {Turns:9d}\n".format(**self.simMeta[h5Set])
         return sumStr
 
     #

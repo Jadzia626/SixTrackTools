@@ -13,6 +13,7 @@
 import logging
 import sttools
 import pprint
+import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -85,3 +86,9 @@ def symmetricRange(minVal, maxVal, meanVal):
     minVal -= meanVal
     extVal  = max(abs(minVal),abs(maxVal))
     return meanVal-extVal, meanVal+extVal
+
+def getTimeStamp(dateSep=" "):
+    timeValue  = datetime.datetime.now()
+    returnDate = "{:%Y-%m-%d}".format(timeValue)
+    returnTime = "{:%H:%M:%S}".format(timeValue)
+    return "%s%s%s" % (returnDate,dateSep,returnTime)

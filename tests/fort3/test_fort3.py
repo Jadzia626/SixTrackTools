@@ -10,8 +10,8 @@
 
 import filecmp as fcmp
 
-from os                import path, unlink
-from sttools.filetools import Fort3
+from os               import path, unlink
+from sttools.simtools import Fort3
 
 currPath = path.dirname(path.realpath(__file__))
 

@@ -13,10 +13,12 @@
 import logging
 
 # Submodules
+from sttools.simtools.fort2    import Fort2
+from sttools.simtools.fort3    import Fort3
 from sttools.simtools.partdist import PartDist
 from sttools.simtools.simjob   import SixTrackJob
 
-__all__ = ["SixTrackJob","PartDist"]
+__all__ = ["Fort2","Fort3","SixTrackJob","PartDist"]
 
 # Logging
 logger = logging.getLogger(__name__)

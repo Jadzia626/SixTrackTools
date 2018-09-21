@@ -10,8 +10,9 @@
 
 import filecmp as fcmp
 
-from os      import path, unlink
-from sttools import Const, PartDist
+from os               import path, unlink
+from sttools          import Const
+from sttools.simtools import PartDist
 
 currPath = path.dirname(path.realpath(__file__))
 

@@ -14,14 +14,12 @@ import logging
 
 # Submodules
 from sttools.filetools.aperture import Aperture
-from sttools.filetools.fort2    import Fort2
-from sttools.filetools.fort3    import Fort3
 from sttools.filetools.colmaps  import STColMaps
 from sttools.filetools.stdump   import STDump
 from sttools.filetools.tablefs  import TableFS
 from sttools.filetools.wrapper  import FileWrapper, SimWrapper
 
-__all__ = ["Aperture","Fort2","Fort3","STColMaps","STDump","TableFS","FileWrapper","SimWrapper"]
+__all__ = ["Aperture","STColMaps","STDump","TableFS","FileWrapper","SimWrapper"]
 
 # Logging
 logger = logging.getLogger(__name__)

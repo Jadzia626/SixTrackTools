@@ -11,7 +11,9 @@
 """
 
 import logging
+import asyncio
 import subprocess
+import concurrent.futures
 
 from os      import path, mkdir, listdir
 from shutil  import rmtree, copy2
@@ -203,7 +205,7 @@ class SixTrackJob():
 
     def runSerial(self, numSim):
         if numSim <= 0:
-            logger.warning("Requested %d simulation jobs. Nothing to do ..." % numSim)
+            logger.warning("Requested %d simulation jobs. I don't know how to do that ..." % numSim)
             return False
         self.numSim = numSim
         self._initRun()
@@ -216,12 +218,55 @@ class SixTrackJob():
             prTime = 0.0
             prTime        += self._prepareSimulation(simID)
             prTime        += self._processInputFile(simID)
-            exTime,exCode = self._runSimulation(simID)
+            exTime,exCode  = self._runSimulation(simID)
             prTime        += self._finaliseSimulation(simID)
             self._logJobEnd(simID,exTime,exCode)
             logger.info("-"*80)
             logger.info("Execution Time: %12.3f seconds" % (exTime+prTime))
         self._endRun()
+        return True
+
+    def runParallel(self, numSim, numThreads):
+        if numThreads <= 0:
+            logger.warning("Requested %d simulation threads. I don't know how to do that ..." % numThreads)
+            return False
+        if numSim <= 0:
+            logger.warning("Requested %d simulation jobs. I don't know how to do that ..." % numSim)
+            return False
+        self.numSim = numSim
+        self._initRun()
+        self._prepareFolders()
+        sExec = concurrent.futures.ThreadPoolExecutor(max_workers=numThreads)
+        sLoop = asyncio.get_event_loop()
+        try:
+            sLoop.run_until_complete(self._jobThreader(sExec))
+        finally:
+            sLoop.close()
+        self._endRun()
+        return True
+
+    #
+    #  Internal Functions : Job (Threaded)
+    #
+
+    async def _jobThreader(self, sExec):
+        sTasks = []
+        sLoop  = asyncio.get_event_loop()
+        for simID in range(self.numSim):
+            sTasks.append(sLoop.run_in_executor(sExec, self._jobWorker, simID))
+        await asyncio.wait(sTasks)
+        return True
+
+    def _jobWorker(self, simID):
+        self._logJobStart(simID)
+        logger.info("Starting Simulation: %5d/%d" % (simID+1,self.numSim))
+        prTime         = 0.0
+        prTime        += self._prepareSimulation(simID)
+        prTime        += self._processInputFile(simID)
+        exTime,exCode  = self._runSimulation(simID)
+        prTime        += self._finaliseSimulation(simID)
+        logger.info("Finished Simulation: %5d/%d in %12.3f seconds" % (simID+1,self.numSim,exTime+prTime))
+        self._logJobEnd(simID,exTime,exCode)
         return True
 
     #
@@ -472,7 +517,7 @@ class SixTrackJob():
         ))
         self.valLog.flush()
         return True
-    
+
     def _logValuesNext(self):
         self.valLog.write("-"*79+"\n")
         self.valLog.flush()
@@ -480,7 +525,7 @@ class SixTrackJob():
 
     def _logJobStart(self, simID):
         self.jobLog.write(" Sim {:<5d} {:}\n".format(
-            simID+1, self.jobNames[simID] 
+            simID+1, self.jobNames[simID]
         ))
         self.jobLog.flush()
         return True

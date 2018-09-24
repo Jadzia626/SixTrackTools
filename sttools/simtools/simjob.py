@@ -13,8 +13,10 @@
 import logging
 import subprocess
 
-from os     import path, mkdir, listdir
-from shutil import rmtree
+from os      import path, mkdir, listdir
+from shutil  import rmtree, copy2
+from zipfile import ZipFile
+from time    import time
 
 from sttools.functions         import getTimeStamp
 from sttools.simtools.partdist import PartDist
@@ -62,6 +64,7 @@ class SixTrackJob():
         self.partLabel = "%NPART%"               # Keyword for search/replace
         self.numTurn   = 1                       # Number of turns in simulation
         self.turnLabel = "%NTURN%"               # Keyword for search/replace
+        self.doCleanup = True                    # Delete run folder(s) after execution
 
         # Runtime Stuff
         self.timeStamp = ""
@@ -73,6 +76,9 @@ class SixTrackJob():
         self.numSim    = 0
         self.jobNames  = []
         self.runDir    = []
+        self.outLog    = []
+        self.errLog    = []
+        self.simOut    = []
 
         return
 
@@ -91,6 +97,13 @@ class SixTrackJob():
             self.execName = execName
         else:
             raise FileNotFoundError("No file named '%s' in job folder." % execName)
+        return True
+
+    def setCleanup(self, doClean):
+        if isinstance(doClean, bool):
+            self.doCleanup = doClean
+        else:
+            raise ValueError("setCleanup takes a boolean argument.")
         return True
 
     def setNPart(self, numPart, partLabel=None):
@@ -135,18 +148,29 @@ class SixTrackJob():
             raise ValueError("Unknown output format %d." % outFormat)
         return
 
-    def addInputFile(self, fileName, replaceQueue=False):
-        """Adds a file that will be copied to the
+    def addInputFile(self, fileList, replaceQueue=False):
+        """Adds a file that will be copied to the simulation folder before execution. If the
+        replaceQueue flag is True, it will also apply all simulation value entries to the file.
         """
-        fullPath = path.join(self.jobFolder, fileName)
-        if path.isfile(fullPath):
-            if fileName not in self.inFiles.keys():
-                self.inFiles[fileName] = replaceQueue
+        inFiles = []
+        if isinstance(fileList, str):
+            inFiles.append(fileList)
         else:
-            raise FileNotFoundError("No file named '%s' in job folder." % fileName)
+            inFiles = fileList
+        for fileName in inFiles:
+            fullPath = path.join(self.jobFolder, fileName)
+            if path.isfile(fullPath):
+                if fileName not in self.inFiles.keys():
+                    self.inFiles[fileName] = replaceQueue
+            else:
+                raise FileNotFoundError("No file named '%s' in job folder." % fileName)
         return True
 
-    def addOutputFile(self, fileName):
+    def addOutputFile(self, fileList):
+        if isinstance(fileList, str):
+            self.outFiles.append(fileList)
+        else:
+            self.outFiles += fileList
         return True
 
     def addSeed(self, seedName):
@@ -179,15 +203,24 @@ class SixTrackJob():
 
     def runSerial(self, numSim):
         if numSim <= 0:
+            logger.warning("Requested %d simulation jobs. Nothing to do ..." % numSim)
             return False
         self.numSim = numSim
         self._initRun()
         self._prepareFolders()
         for simID in range(numSim):
-            self._prepareSimulation(simID)
-            self._processInputFile(simID)
-            self._runSimulation(simID)
-            self._finaliseSimulation(simID)
+            logger.info("")
+            logger.info("Starting Simulation: %5d/%d" % (simID+1,numSim))
+            logger.info("="*80)
+            self._logJobStart(simID)
+            prTime = 0.0
+            prTime        += self._prepareSimulation(simID)
+            prTime        += self._processInputFile(simID)
+            exTime,exCode = self._runSimulation(simID)
+            prTime        += self._finaliseSimulation(simID)
+            self._logJobEnd(simID,exTime,exCode)
+            logger.info("-"*80)
+            logger.info("Execution Time: %12.3f seconds" % (exTime+prTime))
         self._endRun()
         return True
 
@@ -199,10 +232,13 @@ class SixTrackJob():
 
         # Generate the jobnames
         jobExt = ""
-        if self.outFormat == self.OUT_ARCH: jobExt = "tar.gz"
-        if self.outFormat == self.OUT_HDF5: jobExt = "hdf5"
+        if self.outFormat == self.OUT_ARCH: jobExt = ".zip"
+        if self.outFormat == self.OUT_HDF5: jobExt = ".hdf5"
         for i in range(self.numSim):
-            self.jobNames.append("%s.%05d.%s" % (self.outName,i+1,jobExt))
+            self.jobNames.append("%s.%05d%s" % (self.outName,i+1,jobExt))
+            self.outLog.append("stdOut.%05d.log"   % (i+1))
+            self.errLog.append("stdErr.%05d.log"   % (i+1))
+            self.simOut.append("simFiles.%05d.zip" % (i+1))
             self.runDir.append(None)
 
         # Generate the seeds
@@ -243,6 +279,7 @@ class SixTrackJob():
                     self.jobNames[i],seedType,seedName,self.allSeeds[k]
                 ))
         self.seedLog.write("\n")
+        self.seedLog.flush()
 
         self.valLog = open(self.LOG_VALS,mode="w")
         self.valLog.write(" Input Values Log\n")
@@ -253,6 +290,7 @@ class SixTrackJob():
             "Job Name","File","Key","Value","Count"
         ))
         self.valLog.write("="*79+"\n")
+        self.valLog.flush()
 
         self.jobLog = open(self.LOG_JOB,mode="w")
         self.jobLog.write(" Job Log\n")
@@ -261,6 +299,7 @@ class SixTrackJob():
         self.jobLog.write(" Particles: %d\n" % self.numPart)
         self.jobLog.write(" Turns:     %d\n" % self.numTurn)
         self.jobLog.write("\n")
+        self.jobLog.flush()
 
         return True
 
@@ -275,13 +314,15 @@ class SixTrackJob():
     #
 
     def _prepareSimulation(self, simID):
+        tStart = time()
 
         # Set up temp folder
-        tmpDir = path.join(self.jobFolder, self.DIR_TEMP, "RunTmp.%d" % simID)
+        tmpDir = path.join(self.jobFolder, self.DIR_TEMP, "RunTmp.%d" % (simID+1))
         if path.isdir(tmpDir):
             rmtree(tmpDir)
         mkdir(tmpDir)
         self.runDir[simID] = tmpDir
+        copy2(path.join(self.jobFolder,self.execName),self.runDir[simID])
 
         # Run particle generator
         if self.partGen == self.GEN_COLL:
@@ -290,58 +331,110 @@ class SixTrackJob():
             pGen.genNormDist(int(self.numPart/2))
             pGen.writeCollDist(self.runDir[simID], int(self.numPart/2))
 
-        return True
+        return time()-tStart
 
     def _runSimulation(self, simID):
-        return True
+        tStart  = time()
+        execCmd = "./"+self.execName
+        logger.info("Running: %s" % execCmd)
+        stdOut, stdErr, exCode = self._runShellCommand(execCmd,self.runDir[simID])
+        if exCode == 0:
+            logger.info("Simulation completed without errors")
+        else:
+            logger.error("Simulation exited with error code %d" % exCode)
+        with open(path.join(self.runDir[simID],self.outLog[simID]),mode="w") as outLog:
+            outLog.write(stdOut)
+        with open(path.join(self.runDir[simID],self.errLog[simID]),mode="w") as errLog:
+            errLog.write(stdErr)
+        return time()-tStart, exCode
 
     def _finaliseSimulation(self, simID):
-        return True
+        tStart = time()
+        resDir = path.join(self.jobFolder, self.DIR_RESULT)
+        if self.outFormat == self.OUT_HDF5:
+            copy2(path.join(self.runDir[simID], self.jobNames[simID]),resDir)
+        copy2(path.join(self.runDir[simID], self.outLog[simID]),resDir)
+        copy2(path.join(self.runDir[simID], self.errLog[simID]),resDir)
+        if len(self.outFiles) == 0:
+            logger.info("Not keeping any text output files")
+        else:
+            if self.outFiles[0] == "*":
+                keepThese = listdir(self.runDir[simID])
+            else:
+                keepThese = self.outFiles
+            if self.outFormat != self.OUT_PLAIN:
+                zOut = ZipFile(path.join(resDir, self.simOut[simID]),"w")
+            else:
+                simRes = path.join(resDir, self.jobNames[simID])
+                mkdir(simRes)
+            for outFile in keepThese:
+                toKeep = path.join(self.runDir[simID], outFile)
+                if path.isfile(toKeep):
+                    if self.outFormat != self.OUT_PLAIN:
+                        logger.info("Archiving file '%s' ..." % outFile)
+                        zOut.write(toKeep,arcname=outFile)
+                    else:
+                        logger.info("Saving file '%s' ..." % outFile)
+                        copy2(toKeep,simRes)
+                elif path.isdir(toKeep):
+                    logger.warning("Not a file '%s', skipping" % outFile)
+                else:
+                    logger.warning("Could not find file '%s' in run folder" % outFile)
+            if self.outFormat != self.OUT_PLAIN:
+                zOut.close()
+        if self.doCleanup:
+            rmtree(self.runDir[simID])
+        return time()-tStart
 
     def _processInputFile(self, simID):
-
-        toReplace = [
-            ("%SIMNO%", str(simID+1)),
-            ("%NPART%", str(self.numPart)),
-            ("%NTURN%", str(self.numTurn)),
-        ]
+        tStart = time()
+        toReplace = {
+            "%SIMNO%"  : str(simID+1),
+            "%NPART%"  : str(self.numPart),
+            "%NPAIR%"  : str(int(self.numPart/2)),
+            "%NTURN%"  : str(self.numTurn),
+            "%H5FILE%" : self.jobNames[simID],
+            "%H5ROOT%" : "/",
+        }
 
         if self.partGen != self.GEN_NONE:
             seedOne = 1
         else:
             seedOne = 0
         for seedNo in range(seedOne,self.numSeed):
-            toReplace.append((
-                self.jobSeeds[seedNo-seedOne],
-                str(self.allSeeds[simID*self.numSeed+seedNo])
-            ))
+            toReplace[self.jobSeeds[seedNo-seedOne]] = str(self.allSeeds[simID*self.numSeed+seedNo])
 
         for keyName in self.inVars.keys():
             keySpec = self.inVars[keyName]
             if keySpec[2] == -1 or keySpec[2] == simID:
-                toReplace.append((keyName,keySpec[0]))
+                toReplace[keyName] = keySpec[0]
             else:
-                toReplace.append((keyName,keySpec[1]))
+                toReplace[keyName] = keySpec[1]
 
         for fileName in self.inFiles.keys():
+            nReplace = 0
             if self.inFiles[fileName]:
                 # Parse for search/replace
                 inFile = open(path.join(self.jobFolder,fileName), mode="r")
                 inBuff = inFile.read()
                 inFile.close()
-                for keyName, keyValue in toReplace:
+                for keyName in toReplace.keys():
                     nFound = inBuff.count(keyName)
                     if nFound == 0: continue
-                    inBuff = inBuff.replace(keyName,keyValue)
-                    self._logValues(simID, fileName, keyName, keyValue, nFound)
+                    inBuff = inBuff.replace(keyName,toReplace[keyName])
+                    self._logValues(simID, fileName, keyName, toReplace[keyName], nFound)
+                    nReplace += 1
                 outFile = open(path.join(self.runDir[simID],fileName), mode="w")
                 outFile.write(inBuff)
                 outFile.close()
+                if nReplace == 0:
+                    self._logValuesCopy(simID, fileName)
             else:
-                # Just copy them. No replace
-                pass
+                copy2(path.join(self.jobFolder,fileName),self.runDir[simID])
+                self._logValuesCopy(simID, fileName)
 
-        return True
+        self._logValuesNext()
+        return time()-tStart
 
     #
     #  Internal Functions : Utils and Wrappers
@@ -361,8 +454,8 @@ class SixTrackJob():
         mkdir(resDir)
         return True
 
-    def _runShellCommand(self, callStr):
-        sysP = subprocess.Popen([callStr], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    def _runShellCommand(self, callStr, callDir):
+        sysP = subprocess.Popen([callStr], stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, cwd=callDir)
         stdOut, stdErr = sysP.communicate()
         return stdOut.decode("utf-8"), stdErr.decode("utf-8"), sysP.returncode
 
@@ -370,6 +463,37 @@ class SixTrackJob():
         self.valLog.write(" {:<20} {:<16} {:<16} {:<16} {:5d} \n".format(
             self.jobNames[simID], fileName, keyName, keyValue, nFound
         ))
+        self.valLog.flush()
         return True
+
+    def _logValuesCopy(self, simID, fileName):
+        self.valLog.write(" {:<20} {:<16} {:<4} \n".format(
+            self.jobNames[simID], fileName, "NONE"
+        ))
+        self.valLog.flush()
+        return True
+    
+    def _logValuesNext(self):
+        self.valLog.write("-"*79+"\n")
+        self.valLog.flush()
+        return True
+
+    def _logJobStart(self, simID):
+        self.jobLog.write(" Sim {:<5d} {:}\n".format(
+            simID+1, self.jobNames[simID] 
+        ))
+        self.jobLog.flush()
+        return True
+
+    def _logJobEnd(self, simID, simTime, exCode):
+        if exCode == 0:
+            exStatus = "[Success]"
+        else:
+            exStatus = "[Failed %d]" % exCode
+        self.jobLog.write("    #{:<5d} {:.<40} {:<12} {:10.3f} sec\n".format(
+            simID+1, self.jobNames[simID]+" ", exStatus, simTime
+        ))
+        self.jobLog.flush()
+        return
 
 # END Class SixTrackJob

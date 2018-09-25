@@ -34,7 +34,7 @@ __status__     = "Perpetual Development"
 # Logging
 logger = logging.getLogger(__name__)
 
-def setLoggingLevel(logLevel, showSource=False):
+def loggingConfig(logLevel, toStd=True, logFile=None, showSource=False):
 
     if isinstance(logLevel, str):
         logLevel = logLevel.upper()
@@ -56,13 +56,23 @@ def setLoggingLevel(logLevel, showSource=False):
     else:
         logFormat = logging.Formatter(fmt = "{levelname:8}  {message}", style="{")
     logger = logging.getLogger("sttools")
-    sHandle = logging.StreamHandler()
-    sHandle.setFormatter(logFormat)
     logger.handlers = []
+
+    if logFile is not None:
+        fHandle = logging.FileHandler(logFile)
+        fHandle.setFormatter(logFormat)
+        fHandle.setLevel(logLevel)
+        logger.addHandler(fHandle)
+
+    if toStd:
+        sHandle = logging.StreamHandler()
+        sHandle.setFormatter(logFormat)
+        sHandle.setLevel(logLevel)
+        logger.addHandler(sHandle)
+
     logger.setLevel(logLevel)
-    logger.addHandler(sHandle)
 
     return True
 
 # Set default logging level
-setLoggingLevel(logging.INFO)
+loggingConfig(logging.INFO)

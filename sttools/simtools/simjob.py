@@ -19,6 +19,7 @@ from os      import path, mkdir, listdir
 from shutil  import rmtree, copy2
 from zipfile import ZipFile
 from time    import time
+from math    import floor, log10
 
 from sttools.functions         import getTimeStamp
 from sttools.simtools.partdist import PartDist
@@ -67,6 +68,7 @@ class SixTrackJob():
         self.numTurn   = 1                       # Number of turns in simulation
         self.turnLabel = "%NTURN%"               # Keyword for search/replace
         self.doCleanup = True                    # Delete run folder(s) after execution
+        self.stdJobLog = False                   # Print content of job log to stdout
 
         # Runtime Stuff
         self.timeStamp = ""
@@ -76,11 +78,16 @@ class SixTrackJob():
         self.allSeeds  = []
         self.numSeed   = 0
         self.numSim    = 0
+        self.numThread = 0
         self.jobNames  = []
         self.runDir    = []
         self.outLog    = []
         self.errLog    = []
         self.simOut    = []
+        self.textBuff  = {}
+        self.runStart  = 0.0
+        self.cpuTime   = []
+        self.simExit   = []
 
         return
 
@@ -106,6 +113,13 @@ class SixTrackJob():
             self.doCleanup = doClean
         else:
             raise ValueError("setCleanup takes a boolean argument.")
+        return True
+
+    def setEchoJobLog(self, stdJobLog):
+        if isinstance(stdJobLog, bool):
+            self.stdJobLog = stdJobLog
+        else:
+            raise ValueError("setEchoJobLog takes a boolean argument.")
         return True
 
     def setNPart(self, numPart, partLabel=None):
@@ -207,7 +221,8 @@ class SixTrackJob():
         if numSim <= 0:
             logger.warning("Requested %d simulation jobs. I don't know how to do that ..." % numSim)
             return False
-        self.numSim = numSim
+        self.numSim    = numSim
+        self.numThread = 1
         self._initRun()
         self._prepareFolders()
         for simID in range(numSim):
@@ -233,7 +248,8 @@ class SixTrackJob():
         if numSim <= 0:
             logger.warning("Requested %d simulation jobs. I don't know how to do that ..." % numSim)
             return False
-        self.numSim = numSim
+        self.numSim    = numSim
+        self.numThread = numThreads
         self._initRun()
         self._prepareFolders()
         sExec = concurrent.futures.ThreadPoolExecutor(max_workers=numThreads)
@@ -274,6 +290,7 @@ class SixTrackJob():
     #
 
     def _initRun(self):
+        self.runStart = time()
 
         # Generate the jobnames
         jobExt = ""
@@ -336,19 +353,41 @@ class SixTrackJob():
         ))
         self.valLog.write("="*79+"\n")
         self.valLog.flush()
+        self.textBuff["valLog"] = {}
 
+        jobLog = []
         self.jobLog = open(self.LOG_JOB,mode="w")
-        self.jobLog.write(" Job Log\n")
-        self.jobLog.write("=========\n")
-        self.jobLog.write(" TimeStamp: %s\n" % self.timeStamp)
-        self.jobLog.write(" Particles: %d\n" % self.numPart)
-        self.jobLog.write(" Turns:     %d\n" % self.numTurn)
-        self.jobLog.write("\n")
-        self.jobLog.flush()
+        jobLog.append("")
+        jobLog.append(" Running Simulations")
+        jobLog.append("=====================")
+        jobLog.append(" TimeStamp: %s" % self.timeStamp)
+        jobLog.append(" Particles: %d" % self.numPart)
+        jobLog.append(" Turns:     %d" % self.numTurn)
+        jobLog.append("")
+        for jobLine in jobLog:
+            self.jobLog.write(jobLine+"\n")
+            if self.stdJobLog: print(jobLine)
 
         return True
 
     def _endRun(self):
+        nFailed   = sum(self.simExit)
+        nSuccess  = self.numSim-nFailed
+        totTime   = sum(self.cpuTime)
+        runTime   = time()-self.runStart
+        jobStatus = []
+        jobStatus.append("")
+        jobStatus.append(" Job Summary")
+        jobStatus.append("=============")
+        jobStatus.append(" Completed: %7d    simulation(s)" % nSuccess)
+        jobStatus.append(" Failed:    %7d    simulation(s)" % nFailed)
+        jobStatus.append(" Run Setup: %7d    thread(s)"     % self.numThread)
+        jobStatus.append(" CPU Time:  %10.2f seconds"       % totTime)
+        jobStatus.append(" Run Time:  %10.2f seconds"       % runTime)
+        jobStatus.append("")
+        for jobLine in jobStatus:
+            self.jobLog.write(jobLine+"\n")
+            if self.stdJobLog: print(jobLine)
         self.seedLog.close()
         self.valLog.close()
         self.jobLog.close()
@@ -478,7 +517,7 @@ class SixTrackJob():
                 copy2(path.join(self.jobFolder,fileName),self.runDir[simID])
                 self._logValuesCopy(simID, fileName)
 
-        self._logValuesNext()
+        self._logValuesNext(simID)
         return time()-tStart
 
     #
@@ -505,40 +544,56 @@ class SixTrackJob():
         return stdOut.decode("utf-8"), stdErr.decode("utf-8"), sysP.returncode
 
     def _logValues(self, simID, fileName, keyName, keyValue, nFound):
-        self.valLog.write(" {:<20} {:<16} {:<16} {:<16} {:5d} \n".format(
+        if not simID in self.textBuff["valLog"]:
+            self.textBuff["valLog"][simID] = ""
+        self.textBuff["valLog"][simID] += " {:<20} {:<16} {:<16} {:<16} {:5d} \n".format(
             self.jobNames[simID], fileName, keyName, keyValue, nFound
-        ))
-        self.valLog.flush()
+        )
         return True
 
     def _logValuesCopy(self, simID, fileName):
-        self.valLog.write(" {:<20} {:<16} {:<4} \n".format(
+        if not simID in self.textBuff["valLog"]:
+            self.textBuff["valLog"][simID] = ""
+        self.textBuff["valLog"][simID] += " {:<20} {:<16} {:<4} \n".format(
             self.jobNames[simID], fileName, "NONE"
-        ))
-        self.valLog.flush()
+        )
         return True
 
-    def _logValuesNext(self):
+    def _logValuesNext(self, simID):
+        self.valLog.write(self.textBuff["valLog"][simID])
         self.valLog.write("-"*79+"\n")
         self.valLog.flush()
         return True
 
     def _logJobStart(self, simID):
-        self.jobLog.write(" Sim {:<5d} {:}\n".format(
-            simID+1, self.jobNames[simID]
-        ))
+        nDigit   = int(floor(log10(self.numSim)))+1
+        fmtCount = "{:%dd}/{:<%dd}" % (nDigit,nDigit)
+        logStr   = (" "+fmtCount+" Start"+(" "*nDigit)+" {:}").format(
+            simID+1, self.numSim, self.jobNames[simID]
+        )
+        self.jobLog.write(logStr+"\n")
         self.jobLog.flush()
+        if self.stdJobLog:
+            print(logStr)
         return True
 
     def _logJobEnd(self, simID, simTime, exCode):
         if exCode == 0:
-            exStatus = "[Success]"
+            exStatus = "Completed"
+            self.simExit.append(0)
         else:
-            exStatus = "[Failed %d]" % exCode
-        self.jobLog.write("    #{:<5d} {:.<40} {:<12} {:10.3f} sec\n".format(
+            exStatus = "Failed %d" % exCode
+            self.simExit.append(1)
+        nDigit   = int(floor(log10(self.numSim)))+1
+        fmtCount = "{:<%dd}" % (nDigit)
+        logStr   = ((" "*2*nDigit)+"   Sim #"+fmtCount+" {:.<40}  {:<10}  {:8.2f} sec").format(
             simID+1, self.jobNames[simID]+" ", exStatus, simTime
-        ))
+        )
+        self.jobLog.write(logStr+"\n")
         self.jobLog.flush()
+        self.cpuTime.append(simTime)
+        if self.stdJobLog:
+            print(logStr)
         return
 
 # END Class SixTrackJob

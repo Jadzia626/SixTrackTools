@@ -9,14 +9,14 @@
 """
 
 from os                import path, unlink, listdir
-from sttools           import setLoggingLevel, SixTrackSim, DataSet
+from sttools           import loggingConfig, SixTrackSim, DataSet
 from sttools.h5tools   import H5Wrapper
 from sttools.filetools import FileWrapper
 
 currPath = path.dirname(path.realpath(__file__))
 h5Path   = path.join(currPath,"simdata","hdf5")
 
-setLoggingLevel("DEBUG")
+loggingConfig("DEBUG")
 
 def testHDF5Single():
     stSim = SixTrackSim(h5Path,loadOnly=["data.000001.hdf5"])

@@ -26,7 +26,7 @@ class Beams():
         self.simData = simData
         return
 
-    def histSixDim(self, dataSet, nBins=100):
+    def histSixDim(self, dataSet, nBins=100, dTurns=None):
 
         # Check if the data is from collimation or dump module
         if dataSet in ("dist0","distn"):
@@ -88,6 +88,7 @@ class Beams():
         valArgs = {
             "bins"   : 100,
             "figure" : 1,
+            "turns"  : None,
         }
         kwArgs = parseKeyWordArgs(valArgs, theArgs)
 

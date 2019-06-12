@@ -35,7 +35,7 @@ def testBlockSize():
     assert len(fTwo.blockData["Drift"]) == 113
 
 def testStructSize():
-    assert len(fTwo.structData) == 3340
+    assert len(fTwo.structDataS) == 3340
 
 def testInsertElementOK():
     assert fTwo.insertElement("ip3_num",0,[0,0,0,0,0,0],0,1)
@@ -63,7 +63,7 @@ def testInsertElementBreak():
 def testInsertStructOK():
     assert fTwo.insertStruct("ip3_num",0,1)
     assert fTwo.insertStruct("ip3_str","ip3",2)
-    assert len(fTwo.structData) == 3342
+    assert len(fTwo.structDataS) == 3342
 
 def testInsertStructBreak():
     assert not fTwo.insertStruct("idx-too-small",-1,1)

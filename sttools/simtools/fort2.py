@@ -24,6 +24,7 @@ class Fort2():
     fileName   = None
     fileExists = None
     isMultiCol = False
+    indexGo    = None
 
     elemData   = {
         "Name" : [],
@@ -190,6 +191,8 @@ class Fort2():
             if self.isMultiCol:
                 outFile.write("MULTICOL\n")
                 for e in range(len(self.structDataM["Full"])):
+                    if self.indexGo is not None and e == self.indexGo:
+                        outFile.write("GO\n")
                     outFile.write(("{:<24s} {:<24s} {:17.9f}\n").format(
                         self.structDataM["Full"][e],
                         self.structDataM["Name"][e],
@@ -254,7 +257,7 @@ class Fort2():
 
         return True
 
-    def insertStruct(self, inName, inRef, inOffset=0):
+    def insertStruct(self, inName, inRef, inOffset=0, inSPos=0, searchSing=True):
         """
         Inserts a new marker before the structure inRef.
         If inRef is a string, the index of the marker matching the string is used.
@@ -262,8 +265,19 @@ class Fort2():
         marker immediately after the inRef point instead of before (inOffset = 0).
         """
 
+        if self.isMultiCol:
+            struLen = len(self.structDataM["Full"])
+        else:
+            struLen = len(self.structDataS)
+
         if isinstance(inRef,str):
-            arrRef, = np.where(self.structData == inRef)
+            if self.isMultiCol:
+                if searchSing:
+                    arrRef, = np.where(self.structDataM["Name"] == inRef)
+                else:
+                    arrRef, = np.where(self.structDataM["Full"] == inRef)
+            else:
+                arrRef, = np.where(self.structDataS == inRef)
             if len(arrRef) == 1:
                 inRef = arrRef[0]
             elif len(arrRef) > 1:
@@ -278,16 +292,27 @@ class Fort2():
             logger.error("inRef must be either string or integer")
             return False
 
-        if inRef < 0 or inRef >= len(self.structData):
+        if inRef < 0 or inRef >= struLen:
             logger.error("Index out of bounds")
             return False
 
-        inPos = inRef + inOffset
-        if inPos < 0 or inPos >= len(self.structData):
+        inIns = inRef + inOffset
+        if inIns < 0 or inIns >= struLen:
             logger.error("Index + offset out of bounds")
             return False
 
-        self.structData = np.insert(self.structData,inPos,inName)
+        if self.isMultiCol:
+            if inName == "GO":
+                self.indexGo = inIns
+            else:
+                sPos = self.structDataM["SPos"][inRef+inSPos]
+                self.structDataM["Full"] = np.insert(self.structDataM["Full"], inIns, inName)
+                self.structDataM["Name"] = np.insert(self.structDataM["Name"], inIns, inName)
+                self.structDataM["SPos"] = np.insert(self.structDataM["SPos"], inIns, inSPos)
+                if inIns < self.indexGo:
+                    self.indexGo += 1
+        else:
+            self.structDataS = np.insert(self.structDataS, inIns, inName)
 
         return True
 

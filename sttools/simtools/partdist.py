@@ -197,12 +197,12 @@ class PartDist():
         gammaY = 1+alphaY**2 / betaY
 
         # Covariant matrices
-        covX   = np.array([[betaX, alphaX], [-alphaX, gammaX]])
-        covY   = np.array([[betaX, alphaY], [-alphaY, gammaY]])
+        sigmX  = np.array([[betaX, -alphaX], [-alphaX, gammaX]])
+        sigmY  = np.array([[betaX, -alphaY], [-alphaY, gammaY]])
 
         # Cholesky decomposition
-        cholX  = np.linalg.cholesky(covX*gEmitX)
-        cholY  = np.linalg.cholesky(covY*gEmitY)
+        cholX  = np.linalg.cholesky(sigmX*gEmitX)
+        cholY  = np.linalg.cholesky(sigmY*gEmitY)
 
         # Generate uncorrelated distributions
         distX  = np.random.normal(0.0, 1.0, (nPart,2))

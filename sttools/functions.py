@@ -15,6 +15,8 @@ import sttools
 import pprint
 import datetime
 
+from os import path
+
 logger = logging.getLogger(__name__)
 
 def formatNumberExp(floatVal, formatString="%7.2f", expSize=2, nullLimit=1e-18):
@@ -92,3 +94,13 @@ def getTimeStamp(dateSep=" "):
     returnDate = "{:%Y-%m-%d}".format(timeValue)
     returnTime = "{:%H:%M:%S}".format(timeValue)
     return "%s%s%s" % (returnDate,dateSep,returnTime)
+
+def parsePath(inString, defaultPath, defaultFile):
+    if path.isdir(inString):
+        return path.join(inString,defaultFile)
+    if path.isfile(inString):
+        return inString
+    dirPath = path.dirname(inString)
+    if path.isdir(inString):
+        return inString
+    return path.join(defaultPath,defaultFile)

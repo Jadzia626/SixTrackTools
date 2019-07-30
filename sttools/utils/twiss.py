@@ -37,7 +37,7 @@ class Twiss:
             idxPos = "Y"
             idxAng = "YP"
         else:
-            logger.error("Unreckognised direction '%s'" % psDir)
+            logger.error("Unrecognised direction '%s'" % psDir)
             return None
 
         partPos = self.STData.filData[idxPos]
@@ -47,9 +47,9 @@ class Twiss:
         gEmit = sqrt(np.linalg.det(mCov))
         mCov  = mCov / gEmit
 
-        tAlpha = mCov[0,1]
-        tBeta  = mCov[0,0]
-        tGamma = mCov[1,1]
+        tAlpha = -mCov[0,1]
+        tBeta  =  mCov[0,0]
+        tGamma =  mCov[1,1]
         
         retVals = {
             "Count" : 0,

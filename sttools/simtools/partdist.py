@@ -15,9 +15,10 @@ import logging
 import timeit
 import numpy as np
 
-from os                import path
+from os                import path, getcwd
 from sttools.constants import Const
 from sttools.physics   import Physics
+from sttools.functions import parsePath
 
 logger = logging.getLogger(__name__)
 
@@ -38,87 +39,115 @@ class PartDist():
         self.genDDP = None
         self.genE   = None
 
+        self.hasError = False
+        logger.info("Initialising particle distribution:")
         if "energy" in keyVals:
             self.beamEnergy = initData["energy"]
+            logger.info(" * Reference Energy:       %16.9e" % self.beamEnergy)
         else:
             self.beamEnergy = 1.0
 
         if "mass" in keyVals:
             self.partMass = initData["mass"]
+            logger.info(" * Reference Mass:         %16.9e" % self.partMass)
         else:
             self.partMass = 1.0
 
         if "nemit" in keyVals:
             self.normEmit = initData["nemit"]
+            if len(self.normEmit) == 2:
+                logger.info(" * Normalised Emittance:   %16.9e %16.9e" % (self.normEmit[0],self.normEmit[1]))
+            else:
+                logger.error("Value 'nemit' must be a vector of [x,y] values")
+                self.hasError = True
         else:
             self.normEmit = [0.0, 0.0]
 
         if "gemit" in keyVals:
             self.geomEmit = initData["gemit"]
+            if len(self.geomEmit) == 2:
+                logger.info(" * Geometric Emittance:    %16.9e %16.9e" % (self.geomEmit[0],self.geomEmit[1]))
+            else:
+                logger.error("Value 'gemit' must be a vector of [x,y] values")
+                self.hasError = True
         else:
             self.geomEmit = [0.0, 0.0]
 
         if "twalpha" in keyVals:
             self.twissAlpha = initData["twalpha"]
+            if len(self.twissAlpha) == 2:
+                logger.info(" * Twiss Alpha:            %16.9e %16.9e" % (self.twissAlpha[0],self.twissAlpha[1]))
+            else:
+                logger.error("Value 'twalpha' must be a vector of [x,y] values")
+                self.hasError = True
         else:
             self.twissAlpha = [0.0, 0.0]
 
         if "twbeta" in keyVals:
             self.twissBeta = initData["twbeta"]
+            if len(self.twissBeta) == 2:
+                logger.info(" * Twiss Beta:             %16.9e %16.9e" % (self.twissBeta[0],self.twissBeta[1]))
+            else:
+                logger.error("Value 'twbeta' must be a vector of [x,y] values")
+                self.hasError = True
         else:
             self.twissBeta = [1.0, 1.0]
 
         if "offset" in keyVals:
             self.beamOffset = initData["offset"]
+            if len(self.beamOffset) == 4:
+                logger.info(" * Beam Offset X,XP:       %16.9e %16.9e" % (self.beamOffset[0],self.beamOffset[1]))
+                logger.info(" * Beam Offset Y,YP:       %16.9e %16.9e" % (self.beamOffset[2],self.beamOffset[3]))
+            else:
+                logger.error("Value 'offset' must be a vector of [x,xp,y,yp] values")
+                self.hasError = True
         else:
             self.beamOffset = [0.0, 0.0, 0.0, 0.0]
 
         if "sigmaxxp" in keyVals:
             self.sigmaXXP = initData["sigmaxxp"]
+            if len(self.twissBeta) == 2:
+                logger.info(" * Beam Sigma X,XP:        %16.9e %16.9e" % (self.sigmaXXP[0],self.sigmaXXP[1]))
+            else:
+                logger.error("Value 'sigmaxxp' must be a vector of [x,xp] values")
+                self.hasError = True
         else:
             self.sigmaXXP = [1.0, 1.0]
 
         if "sigmayyp" in keyVals:
             self.sigmaYYP = initData["sigmayyp"]
+            if len(self.twissBeta) == 2:
+                logger.info(" * Beam Sigma Y,YP:        %16.9e %16.9e" % (self.sigmaYYP[0],self.sigmaYYP[1]))
+            else:
+                logger.error("Value 'sigmayyp' must be a vector of [y,yp] values")
+                self.hasError = True
         else:
             self.sigmaYYP = [1.0, 1.0]
 
         if "sigmaz" in keyVals:
             self.sigmaZ = initData["sigmaz"]
+            logger.info(" * Beam Sigma Z:           %16.9e" % self.sigmaZ)
         else:
             self.sigmaZ = 0.0
 
         if "spreade" in keyVals:
             self.spreadE = initData["spreade"]
+            logger.info(" * Beam Energy Spread:     %16.9e" % self.spreadE)
         else:
             self.spreadE = 0.0
 
         if "spreadp" in keyVals:
             self.spreadP = initData["spreadp"]
+            logger.info(" * Beam Momentum Spread:   %16.9e" % self.spreadP)
         else:
             self.spreadP = 0.0
 
-        # Check Values
-        self.hasError = False
-        if not len(self.normEmit) == 2:
-            logger.error("Value 'nemit' must be a vector of [x,y] values")
-            self.hasError = True
-
-        if not len(self.geomEmit) == 2:
-            logger.error("Value 'gemit' must be a vector of [x,y] values")
-            self.hasError = True
-
-        if not len(self.twissAlpha) == 2:
-            logger.error("Value 'twalpha' must be a vector of [x,y] values")
-            self.hasError = True
-
-        if not len(self.twissBeta) == 2:
-            logger.error("Value 'twbeta' must be a vector of [x,y] values")
-            self.hasError = True
-
-        if not len(self.beamOffset) == 4:
-            logger.error("Value 'offset' must be a vector of [x,xp,y,yp] values")
-            self.hasError = True
+        if "format" in keyVals:
+            self.colFormat = initData["format"]
+            logger.info("Output Column Formats:")
+            logger.info(", ".join(self.colFormat))
+        else:
+            self.colFormat = []
 
         bG, bB, bP0 = Physics.energyGammaBeta(self.beamEnergy,self.partMass)
         self.beamGamma = bG
@@ -138,9 +167,7 @@ class PartDist():
     def setSeed(self, newSeed, seedFile=None):
 
         if seedFile is not None:
-            if not path.isdir(path.dirname(seedFile)):
-                logger.error("Path not found: %s" % path.dirname(seedFile))
-                return False
+            seedFile = parsePath(seedFile, getcwd(), "seeds.txt")
             with open(seedFile,"a+") as outFile:
                 outFile.write(str(newSeed)+"\n")
 
@@ -197,20 +224,22 @@ class PartDist():
         gammaY = 1+alphaY**2 / betaY
 
         # Covariant matrices
-        sigmX  = np.array([[betaX, -alphaX], [-alphaX, gammaX]])
-        sigmY  = np.array([[betaX, -alphaY], [-alphaY, gammaY]])
+        sigmaX = np.array([[betaX, -alphaX], [-alphaX, gammaX]])
+        sigmaY = np.array([[betaX, -alphaY], [-alphaY, gammaY]])
 
         # Cholesky decomposition
-        cholX  = np.linalg.cholesky(sigmX*gEmitX)
-        cholY  = np.linalg.cholesky(sigmY*gEmitY)
+        cholX  = np.linalg.cholesky(sigmaX*gEmitX)
+        cholY  = np.linalg.cholesky(sigmaY*gEmitY)
 
         # Generate uncorrelated distributions
         distX  = np.random.normal(0.0, 1.0, (nPart,2))
         distY  = np.random.normal(0.0, 1.0, (nPart,2))
+        distX  = np.dot(distX, cholX)
+        distY  = np.dot(distY, cholY)
 
         # Apply the Cholesky decomposition
-        self.genXXP = np.dot(distX, cholX)
-        self.genYYP = np.dot(distY, cholY)
+        self.genXXP = np.column_stack((distX[:,1], distX[:,0]))
+        self.genYYP = np.column_stack((distY[:,1], distY[:,0]))
 
         return
 
@@ -233,16 +262,12 @@ class PartDist():
 
         startTime = timeit.default_timer()
 
-        if not path.isdir(outPath):
-            logger.error("Path not found: %s" % outPath)
-            return False
-
         if nPairs*2 > len(self.genXXP):
             logger.error("Cannot output more particle pairs than has been generated")
             return False
 
         beamEnergy = self.beamEnergy * 1e-6 # Unit MeV
-        outFile = path.join(outPath, "fort.13")
+        outFile    = parsePath(outPath, getcwd(), "fort.13")
         with open(outFile, "w") as fort13:
             for i in range(nPairs):
                 p1 = i*2
@@ -279,16 +304,11 @@ class PartDist():
 
         startTime = timeit.default_timer()
 
-        if not path.isdir(outPath):
-            logger.error("Path not found: %s" % outPath)
-            return False
-
         if nPairs*2 > len(self.genXXP):
             logger.error("Cannot output more particle pairs than has been generated")
             return False
 
-        beamEnergy = self.beamEnergy * 1e-6 # Unit MeV
-        outFile = path.join(outPath, "partDist.dat")
+        outFile = parsePath(outPath, getcwd(), "partDist.dat")
         with open(outFile, "w") as outFile:
             for i in range(2*nPairs):
                 outFile.write((("{: 22.15e} "*6)+"\n").format(
@@ -298,6 +318,61 @@ class PartDist():
                     self.genYYP[i,1],
                     self.genZ[i],
                     self.genDDP[i]
+                ))
+
+        timePassed = timeit.default_timer() - startTime
+
+        logger.info("Wrote %d particle pairs to file in %.4f sec" % (nPairs,timePassed))
+
+        return True
+
+    def writeDistBlockFile(self, outPath, nPairs, fPrec="22.15e"):
+
+        startTime = timeit.default_timer()
+
+        if nPairs*2 > len(self.genXXP):
+            logger.error("Cannot output more particle pairs than has been generated")
+            return False
+
+        iS = 0
+        iE = 2*nPairs
+
+        xP = np.sin(np.arctan(self.genXXP[iS:iE,1]))
+        yP = np.sin(np.arctan(self.genYYP[iS:iE,1]))
+        pX = xP * self.genP[iS:iE]
+        pY = yP * self.genP[iS:iE]
+        pZ = np.sqrt(self.genP[iS:iE]**2 - pX**2 - pY**2)
+
+        nCol = len(self.colFormat)
+        outData = np.zeros((2*nPairs,nCol))
+        for i in range(nCol):
+            if self.colFormat[i] == "X":
+                outData[:,i] = self.genXXP[iS:iE,0]
+            elif self.colFormat[i] == "Y":
+                outData[:,i] = self.genYYP[iS:iE,0]
+            elif self.colFormat[i] == "XP":
+                outData[:,i] = xP
+            elif self.colFormat[i] == "YP":
+                outData[:,i] = yP
+            elif self.colFormat[i] == "PX":
+                outData[:,i] = pX
+            elif self.colFormat[i] == "PY":
+                outData[:,i] = pY
+            elif self.colFormat[i] in ("PX/P0","PXP0"):
+                outData[:,i] = pX/self.beamMom
+            elif self.colFormat[i] in ("PY/P0","PYP0"):
+                outData[:,i] = pY/self.beamMom
+            elif self.colFormat[i] == "SIGMA":
+                outData[:,i] = self.genZ[iS:iE]
+            else:
+                logger.error("Unknown column format '%s'" % self.colFormat[i])
+
+        outFile = parsePath(outPath, getcwd(), "partDist.dat")
+        with open(outFile, "w") as outFile:
+            outFile.write("# %s\n" % ", ".join(self.colFormat))
+            for i in range(2*nPairs):
+                outFile.write(((("{: "+fPrec+"} ")*nCol)+"\n").format(
+                    *outData[i,:]
                 ))
 
         timePassed = timeit.default_timer() - startTime
